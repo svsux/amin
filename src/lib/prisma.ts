@@ -5,12 +5,12 @@ let prisma: PrismaClient;
 if (process.env.NODE_ENV === 'production') {
   prisma = new PrismaClient();
 } else {
-  // @ts-ignore
+  // @ts-expect-error // global.prisma is not a standard property
   if (!global.prisma) {
-    // @ts-ignore
+    // @ts-expect-error // global.prisma is not a standard property
     global.prisma = new PrismaClient();
   }
-  // @ts-ignore
+  // @ts-expect-error // global.prisma is not a standard property
   prisma = global.prisma;
 }
 

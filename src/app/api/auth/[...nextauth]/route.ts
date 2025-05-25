@@ -13,7 +13,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email", placeholder: "jsmith@example.com" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials, req) {
+      async authorize(credentials, _req) { // Изменено req на _req
         if (!credentials?.email || !credentials?.password) {
           console.log("Missing credentials");
           return null;
