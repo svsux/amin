@@ -3,13 +3,14 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Переменные --font-geist-sans и --font-geist-mono будут предоставлены пакетом geist при импорте в layout.tsx */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans); /* Tailwind будет использовать это */
+  --font-mono: var(--font-geist-mono);  /* Tailwind будет использовать это */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +23,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* font-family: Arial, Helvetica, sans-serif; */ /* Удаляем это, Tailwind позаботится о шрифте */
 }
