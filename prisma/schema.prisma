@@ -20,13 +20,12 @@ model User {
   role          UserRole  @default(USER)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  // Добавьте эти поля для полной совместимости с NextAuth и PrismaAdapter
   name          String?
   emailVerified DateTime?
   image         String?
   accounts      Account[]
   sessions      Session[]
-  storeCashiers StoreCashier[] // ← добавить
+  storeCashiers StoreCashier[]
 }
 
 enum UserRole {
@@ -35,7 +34,6 @@ enum UserRole {
   CASHIER
 }
 
-// Добавьте эти модели для NextAuth
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -71,22 +69,21 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// Модель для товаров (если понадобится в будущем)
 model Product {
   id             String   @id @default(uuid())
   name           String
-  purchasePrice  Float?   // <--- ?
-  salePrice      Float?   // <--- ?
+  purchasePrice  Float    // Сделано обязательным
+  salePrice      Float    // Сделано обязательным
   imageUrl       String?
   quantity       Int
   createdAt      DateTime @default(now())
-  storeProducts StoreProduct[] // ← добавить
+  storeProducts  StoreProduct[]
 }
 
 model Store {
   id        String    @id @default(uuid())
   name      String
-  address   String?
+  address   String    // Сделано обязательным
   cashiers  StoreCashier[]
   products  StoreProduct[]
   createdAt DateTime   @default(now())
@@ -106,4 +103,6 @@ model StoreProduct {
   storeId   String
   product   Product  @relation(fields: [productId], references: [id])
   productId String
+
+  @@unique([storeId, productId]) // Уникальная связь
 }

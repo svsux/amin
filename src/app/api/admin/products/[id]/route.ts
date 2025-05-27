@@ -17,8 +17,9 @@ export async function GET(
 // Обновление товара по id (PATCH /api/admin/products/[id])
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { id } = context.params;
   const session = await getServerSession(authOptions);
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
@@ -83,8 +84,9 @@ export async function PATCH(
 // Удаление товара по id (DELETE /api/admin/products/[id])
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { id } = context.params;
   const session = await getServerSession(authOptions);
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
