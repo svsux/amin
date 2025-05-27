@@ -17,12 +17,6 @@ const eslintConfig = [
     plugins: {
       "@typescript-eslint": tsPlugin, // Регистрируем плагин для этого блока конфигурации
     },
-    // languageOptions: { // parser и parserOptions обычно настраиваются через next/core-web-vitals
-    //   parser: tsParser, // Если next/core-web-vitals не настроил парсер для этого блока
-    //   parserOptions: {
-    //     project: "./tsconfig.json",
-    //   },
-    // },
     rules: {
       "@typescript-eslint/no-unused-vars": [
         "warn",
@@ -32,7 +26,20 @@ const eslintConfig = [
           caughtErrorsIgnorePattern: "^_",
         },
       ],
-      // Здесь можно добавить другие пользовательские правила для TypeScript
+    },
+  },
+  // Новый блок с тем же правилом
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
 ];
