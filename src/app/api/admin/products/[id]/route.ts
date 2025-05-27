@@ -10,10 +10,6 @@ export async function GET(
   req: Request,
   context: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== "ADMIN") {
-    return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
-  }
   const { id } = context.params;
   const product = await prisma.product.findUnique({
     where: { id },
