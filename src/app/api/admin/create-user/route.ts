@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions"; // Убедитесь, что путь к authOptions верный
 import prisma from "@/lib/prisma"; // Убедитесь, что путь к prisma client верный
 import bcrypt from "bcryptjs";
+
 // Определяем UserRole вручную, если он не экспортируется из @prisma/client
 enum UserRole {
   ADMIN = "ADMIN",
@@ -44,11 +45,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Проверка, является ли роль допустимой (хотя мы жестко задаем CASHIER на клиенте, это хорошая практика)
+    // Проверка, является ли роль допустимой
     if (!Object.values(UserRole).includes(role)) {
-        return NextResponse.json({ message: "Недопустимая роль пользователя." }, { status: 400 });
+      return NextResponse.json(
+        { message: "Недопустимая роль пользователя." },
+        { status: 400 }
+      );
     }
-
 
     // 4. Проверка, существует ли пользователь с таким email
     const existingUser = await prisma.user.findUnique({

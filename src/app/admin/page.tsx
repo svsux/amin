@@ -4,9 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import clsx from "clsx";
-import {
-  FiHome, FiLogOut, FiUsers, FiPackage, FiArchive, FiAlertCircle
-} from "react-icons/fi";
+import { FiHome, FiLogOut, FiUsers, FiPackage, FiArchive, FiAlertCircle } from "react-icons/fi";
 import { useState, useEffect, useMemo, FormEvent } from "react";
 
 // Импортируем вынесенные компоненты
@@ -18,11 +16,7 @@ import ProductsSection from "./sections/ProductsSection";
 import StoresSection from "./sections/StoresSection";
 
 // Импортируем типы
-import type {
-  Cashier,
-  Product,
-  Store
-} from "./types";
+import type { Cashier, Product, Store } from "./types";
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
@@ -38,6 +32,8 @@ export default function AdminPage() {
   const [cashierMessage, setCashierMessage] = useState<{ text: string | null; type: "success" | "error" } | null>(null);
   const [isLoadingCashierAction, setIsLoadingCashierAction] = useState(false);
   const [searchTermCashiers, setSearchTermCashiers] = useState("");
+  const [editingCashier, setEditingCashier] = useState<Cashier | null>(null);
+  const [isCashierEditModalOpen, setIsCashierEditModalOpen] = useState(false);
 
   // --- Products State ---
   const [products, setProducts] = useState<Product[]>([]);
@@ -64,21 +60,17 @@ export default function AdminPage() {
   const [editStore, setEditStore] = useState<Store | null>(null);
   const [searchTermStores, setSearchTermStores] = useState("");
 
-  // --- New States for Cashier Editing ---
-  const [editingCashier, setEditingCashier] = useState<Cashier | null>(null);
-  const [isCashierEditModalOpen, setIsCashierEditModalOpen] = useState(false);
-
   // --- Filtered Data ---
-  const filteredCashiers = useMemo(() =>
-    cashiers.filter(c => c.email.toLowerCase().includes(searchTermCashiers.toLowerCase())),
+  const filteredCashiers = useMemo(
+    () => cashiers.filter((c) => c.email.toLowerCase().includes(searchTermCashiers.toLowerCase())),
     [cashiers, searchTermCashiers]
   );
-  const filteredProducts = useMemo(() =>
-    products.filter(p => p.name.toLowerCase().includes(searchTermProducts.toLowerCase())),
+  const filteredProducts = useMemo(
+    () => products.filter((p) => p.name.toLowerCase().includes(searchTermProducts.toLowerCase())),
     [products, searchTermProducts]
   );
-  const filteredStores = useMemo(() =>
-    stores.filter(s => s.name.toLowerCase().includes(searchTermStores.toLowerCase())),
+  const filteredStores = useMemo(
+    () => stores.filter((s) => s.name.toLowerCase().includes(searchTermStores.toLowerCase())),
     [stores, searchTermStores]
   );
 
@@ -102,11 +94,11 @@ export default function AdminPage() {
 
           const productsData = await productsRes.json();
           setProducts(productsData.products || []);
-          
+
           const storesData = await storesRes.json();
           setStores(storesData.stores || []);
-
         } catch (error) {
+          console.error("Ошибка при загрузке данных:", error);
           setCashierMessage({ text: "Ошибка загрузки кассиров.", type: "error" });
           setProductMessage({ text: "Ошибка загрузки товаров.", type: "error" });
           setStoreMessage({ text: "Ошибка загрузки магазинов.", type: "error" });
@@ -118,7 +110,7 @@ export default function AdminPage() {
       }
     };
     if (status === "authenticated") {
-        fetchAllData();
+      fetchAllData();
     }
   }, [session, status]);
 
@@ -367,11 +359,6 @@ export default function AdminPage() {
     }
   };
 
-  const openEditCashierModal = (cashier: Cashier) => {
-    setEditingCashier(cashier);
-    setIsCashierEditModalOpen(true);
-  };
-
   const handleSaveCashierEdit = async (updated: { email: string; password?: string }) => {
     if (!editingCashier) return;
     setIsLoadingCashierAction(true);
@@ -400,6 +387,7 @@ export default function AdminPage() {
     }
   };
 
+  // --- Tab Navigation ---
   const tabItems = [
     { key: "cashiers", label: "Кассиры", icon: <FiUsers /> },
     { key: "products", label: "Товары", icon: <FiPackage /> },
@@ -413,9 +401,7 @@ export default function AdminPage() {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-3">
               <FiHome className="text-indigo-600 h-8 w-8" />
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
-                Панель администратора
-              </h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Панель администратора</h1>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600 hidden sm:block">Привет, {session?.user?.email}</span>
@@ -427,7 +413,6 @@ export default function AdminPage() {
               </Link>
             </div>
           </div>
-          {/* Tabs Navigation */}
           <nav className="flex border-b border-gray-200">
             {tabItems.map((t) => (
               <button
@@ -447,7 +432,7 @@ export default function AdminPage() {
               >
                 {t.icon}
                 <span className="hidden sm:inline">{t.label}</span>
-                <span className="sm:hidden">{t.label.substring(0,3)}</span>
+                <span className="sm:hidden">{t.label.substring(0, 3)}</span>
               </button>
             ))}
           </nav>
@@ -460,7 +445,7 @@ export default function AdminPage() {
             <CashiersSection
               email={email}
               password={password}
-              cashiers={filteredCashiers}
+              cashiers={cashiers}
               loadingCashiers={loadingCashiers}
               cashierMessage={cashierMessage}
               isLoadingCashierAction={isLoadingCashierAction}
@@ -469,13 +454,16 @@ export default function AdminPage() {
               setPassword={setPassword}
               setSearchTermCashiers={setSearchTermCashiers}
               handleCreateCashier={handleCreateCashier}
-              openEditCashierModal={openEditCashierModal}
               handleDeleteCashier={handleDeleteCashier}
+              openEditCashierModal={(cashier) => {
+                setEditingCashier(cashier);
+                setIsCashierEditModalOpen(true);
+              }}
             />
           )}
           {tab === "products" && (
             <ProductsSection
-              products={filteredProducts}
+              products={products}
               loadingProducts={loadingProducts}
               productMessage={productMessage}
               isLoadingProductAction={isLoadingProductAction}
@@ -498,7 +486,7 @@ export default function AdminPage() {
               handleProductSubmit={handleProductSubmit}
               handleEditProduct={handleEditProduct}
               handleDeleteProduct={handleDeleteProduct}
-              resetProductForm={resetProductForm}
+              resetProductForm={resetProductForm} // Добавлено
             />
           )}
           {tab === "stores" && (
@@ -506,7 +494,7 @@ export default function AdminPage() {
               storeName={storeName}
               storeAddress={storeAddress}
               selectedCashiers={selectedCashiers}
-              stores={filteredStores}
+              stores={stores}
               cashiers={cashiers}
               loadingStores={loadingStores}
               storeMessage={storeMessage}
@@ -520,8 +508,8 @@ export default function AdminPage() {
               handleStoreSubmit={handleStoreSubmit}
               handleEditStore={handleEditStore}
               handleDeleteStore={handleDeleteStore}
-              resetStoreForm={resetStoreForm}
-              setStoreMessage={setStoreMessage}
+              resetStoreForm={resetStoreForm} // Добавлено
+              setStoreMessage={setStoreMessage} // Добавлено
             />
           )}
         </div>
@@ -530,7 +518,6 @@ export default function AdminPage() {
         © {new Date().getFullYear()} Smart Stash. Все права защищены.
       </footer>
 
-      {/* Редактирование кассира - Модальное окно */}
       {tab === "cashiers" && (
         <CashierEditModal
           cashier={editingCashier}
