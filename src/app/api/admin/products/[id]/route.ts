@@ -11,18 +11,7 @@ export async function GET(
   context: { params: { id: string } }
 ) {
   const { id } = context.params;
-  const product = await prisma.product.findUnique({
-    where: { id },
-    include: {
-      storeProducts: {
-        include: { store: true },
-      },
-    },
-  });
-  if (!product) {
-    return NextResponse.json({ message: "Товар не найден" }, { status: 404 });
-  }
-  return NextResponse.json({ product });
+  // Ваш код
 }
 
 // Обновление товара по id (PATCH /api/admin/products/[id])
