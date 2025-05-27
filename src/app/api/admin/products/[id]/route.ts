@@ -8,9 +8,9 @@ import path from "path";
 // Получение товара по id (GET /api/admin/products/[id])
 export async function GET(
   req: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = context.params;
+  const { id } = params;
 
   // Проверяем, существует ли товар
   const product = await prisma.product.findUnique({
@@ -32,9 +32,9 @@ export async function GET(
 // Обновление товара по id (PATCH /api/admin/products/[id])
 export async function PATCH(
   req: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = context.params;
+  const { id } = params;
   const session = await getServerSession(authOptions);
 
   if (!session || session.user?.role !== "ADMIN") {
@@ -105,9 +105,9 @@ export async function PATCH(
 // Удаление товара по id (DELETE /api/admin/products/[id])
 export async function DELETE(
   req: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = context.params;
+  const { id } = params;
   const session = await getServerSession(authOptions);
 
   if (!session || session.user?.role !== "ADMIN") {
