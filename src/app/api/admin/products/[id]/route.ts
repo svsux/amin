@@ -19,12 +19,11 @@ export async function PATCH(
   req: Request,
   context: { params: { id: string } }
 ) {
-  const { id } = context.params;
+  const { id } = context.params; // Оставляем только эту строку
   const session = await getServerSession(authOptions);
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
   }
-  const { id } = params;
 
   const formData = await req.formData();
   const name = formData.get("name") as string;
