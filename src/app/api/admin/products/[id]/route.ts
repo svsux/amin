@@ -4,18 +4,17 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
 import { writeFile } from "fs/promises";
 import path from "path";
-import type { RouteContext } from "next/dist/server/web/types";
 
 // Получение товара по id (GET /api/admin/products/[id])
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
   }
-  const { id } = params;
+  const { id } = context.params;
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
