@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation"; // Используем next/navigation для App Router
 
 export default function LoginPage() {
@@ -28,10 +28,15 @@ export default function LoginPage() {
         setError(result.error === "CredentialsSignin" ? "Неверный email или пароль." : result.error);
         setIsLoading(false);
       } else if (result?.ok) {
-        // Вход успешен, next-auth автоматически обновит сессию
-        // Редирект на главную страницу или другую защищенную страницу
-        router.push("/"); // Или, например, '/dashboard'
-        // router.refresh(); // Может понадобиться для обновления состояния сессии на стороне сервера
+        // Ждем обновления сессии и получаем роль пользователя
+        const session = await getSession();
+        if (session?.user?.role === "ADMIN") {
+          router.replace("/admin");
+        } else if (session?.user?.role === "CASHIER") {
+          router.replace("/cashier");
+        } else {
+          router.replace("/");
+        }
       } else {
         setError("Произошла неизвестная ошибка. Попробуйте снова.");
         setIsLoading(false);

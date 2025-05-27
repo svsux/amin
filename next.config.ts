@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Add other Next.js specific configurations here if needed,
+  // but remove the webpack modification for CSS.
 };
 
 export default nextConfig;

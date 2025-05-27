@@ -1,16 +1,34 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Стилизация всех скроллбаров */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #6366f1 #e5e7eb;
+}
+
+/* Для Chrome, Edge, Safari */
+*::-webkit-scrollbar {
+  width: 10px;           /* ширина скроллбара */
+  height: 10px;          /* высота горизонтального скроллбара */
+  margin: 8px;           /* отступ вокруг скроллбара */
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #6366f1; /* цвет ползунка */
+  border-radius: 8px;        /* скругление */
+  border: 2px solid #e5e7eb; /* отступ внутри скроллбара */
+}
+
+*::-webkit-scrollbar-track {
+  background-color: #e5e7eb; /* цвет трека */
+  border-radius: 8px;
+}
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  /* Переменные --font-geist-sans и --font-geist-mono будут предоставлены пакетом geist при импорте в layout.tsx */
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans); /* Tailwind будет использовать это */
-  --font-mono: var(--font-geist-mono);  /* Tailwind будет использовать это */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,5 +41,18 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  /* font-family: Arial, Helvetica, sans-serif; */ /* Удаляем это, Tailwind позаботится о шрифте */
+}
+
+.max-h-\[400px\]::-webkit-scrollbar { /* Экранирование для прямого CSS, если Tailwind не обработает */
+  width: 8px;
+}
+
+.max-h-\[400px\]::-webkit-scrollbar-thumb {
+  background-color: #6366f1;
+  border-radius: 4px;
+}
+
+.max-h-\[400px\]::-webkit-scrollbar-track {
+  background-color: #e5e7eb;
+  border-radius: 4px;
 }

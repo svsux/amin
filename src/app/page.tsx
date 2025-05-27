@@ -1,8 +1,52 @@
+"use client";
+
 import Image from "next/image";
+import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Home() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      if (session?.user?.role === "ADMIN") {
+        router.replace("/admin");
+      } else if (session?.user?.role === "CASHIER") {
+        router.replace("/cashier");
+      }
+    }
+  }, [status, session, router]);
+
+  if (status === "loading") {
+    return <p>Загрузка...</p>;
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+    <div className="grid grid-rows-[auto_1fr_auto] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+      <header className="row-start-1 w-full flex justify-end p-4">
+        {session ? (
+          <div className="flex items-center gap-4">
+            <p>Привет, {session.user?.email} (Роль: {session.user?.role})</p>
+            <button
+              onClick={() => signOut()}
+              className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-red-500 text-white gap-2 hover:bg-red-700 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
+            >
+              Выйти
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-blue-500 text-white gap-2 hover:bg-blue-700 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
+          >
+            Войти
+          </Link>
+        )}
+      </header>
+
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <Image
           className="dark:invert"
