@@ -9,13 +9,13 @@ import type { RouteContext } from "next/dist/server/web/types";
 // Получение товара по id (GET /api/admin/products/[id])
 export async function GET(
   req: Request,
-  context: RouteContext<{ params: { id: string } }>
+  { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
   }
-  const { id } = context.params;
+  const { id } = params;
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
@@ -33,13 +33,13 @@ export async function GET(
 // Обновление товара по id (PATCH /api/admin/products/[id])
 export async function PATCH(
   req: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
   }
-  const { id } = context.params;
+  const { id } = params;
 
   const formData = await req.formData();
   const name = formData.get("name") as string;
@@ -99,13 +99,13 @@ export async function PATCH(
 // Удаление товара по id (DELETE /api/admin/products/[id])
 export async function DELETE(
   req: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
   }
-  const { id } = context.params;
+  const { id } = params;
 
   // Удаляем связи с магазинами
   await prisma.storeProduct.deleteMany({ where: { productId: id } });
