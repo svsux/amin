@@ -8,11 +8,10 @@ import path from "path";
 // Получение товара по id (GET /api/admin/products/[id])
 export async function GET(
   req: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = context.params;
+  const { id } = params;
 
-  // Проверяем, существует ли товар
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
@@ -32,9 +31,9 @@ export async function GET(
 // Обновление товара по id (PATCH /api/admin/products/[id])
 export async function PATCH(
   req: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = context.params;
+  const { id } = params;
   const session = await getServerSession(authOptions);
 
   if (!session || session.user?.role !== "ADMIN") {
@@ -60,7 +59,6 @@ export async function PATCH(
 
   const storeIds = formData.getAll("storeIds") as string[];
 
-  // Проверяем, что переданы магазины
   if (storeIds.length === 0) {
     return NextResponse.json(
       { message: "Выберите хотя бы один магазин." },
@@ -68,12 +66,10 @@ export async function PATCH(
     );
   }
 
-  // 1. Удаляем все старые связи товара с магазинами
   await prisma.storeProduct.deleteMany({
     where: { productId: id },
   });
 
-  // 2. Создаём новые связи
   await prisma.storeProduct.createMany({
     data: storeIds.map((storeId) => ({
       storeId,
@@ -82,7 +78,6 @@ export async function PATCH(
     skipDuplicates: true,
   });
 
-  // 3. Обновляем сам товар
   const product = await prisma.product.update({
     where: { id },
     data: {
@@ -105,19 +100,16 @@ export async function PATCH(
 // Удаление товара по id (DELETE /api/admin/products/[id])
 export async function DELETE(
   req: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = context.params;
+  const { id } = params;
   const session = await getServerSession(authOptions);
 
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
   }
 
-  // Удаляем связи с магазинами
   await prisma.storeProduct.deleteMany({ where: { productId: id } });
-
-  // Удаляем сам товар
   await prisma.product.delete({ where: { id } });
 
   return NextResponse.json({ message: "Товар удалён" });

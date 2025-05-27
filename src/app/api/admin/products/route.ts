@@ -15,11 +15,6 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== "ADMIN") {
-    return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
-  }
-
   const formData = await req.formData();
   const name = formData.get("name") as string;
   const purchasePrice = parseFloat(formData.get("purchasePrice") as string);
@@ -39,7 +34,13 @@ export async function POST(req: Request) {
 
   const storeIds = formData.getAll("storeIds") as string[];
 
-  // 1. Создаём товар
+  if (storeIds.length === 0) {
+    return NextResponse.json(
+      { message: "Выберите хотя бы один магазин." },
+      { status: 400 }
+    );
+  }
+
   const product = await prisma.product.create({
     data: {
       name,
@@ -50,18 +51,14 @@ export async function POST(req: Request) {
     },
   });
 
-  // 2. Создаём связи с магазинами
-  if (storeIds.length > 0) {
-    await prisma.storeProduct.createMany({
-      data: storeIds.map(storeId => ({
-        storeId,
-        productId: product.id,
-      })),
-      skipDuplicates: true,
-    });
-  }
+  await prisma.storeProduct.createMany({
+    data: storeIds.map((storeId) => ({
+      storeId,
+      productId: product.id,
+    })),
+    skipDuplicates: true,
+  });
 
-  // 3. Возвращаем товар с магазинами
   const productWithStores = await prisma.product.findUnique({
     where: { id: product.id },
     include: {

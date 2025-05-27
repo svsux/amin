@@ -216,9 +216,9 @@ export default function AdminPage() {
     setProductSalePrice("");
     setProductImage(null);
     setProductQuantity("");
-    setSelectedStores([]); // очистка выбранных магазинов
-    const fileInput = document.getElementById('product-image-input') as HTMLInputElement;
-    if (fileInput) fileInput.value = '';
+    setSelectedStores([]);
+    const fileInput = document.getElementById("product-image-input") as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
     setEditingProduct(null);
   };
 
