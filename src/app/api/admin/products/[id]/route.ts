@@ -85,16 +85,16 @@ export async function DELETE(
   req: Request,
   context: { params: { id: string } }
 ) {
-  const { id } = context.params;
+  const { id } = context.params; // Оставляем только эту строку
   const session = await getServerSession(authOptions);
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
   }
-  const { id } = params;
 
   // Удаляем связи с магазинами
   await prisma.storeProduct.deleteMany({ where: { productId: id } });
 
+  // Удаляем сам товар
   await prisma.product.delete({ where: { id } });
 
   return NextResponse.json({ message: "Товар удалён" });
