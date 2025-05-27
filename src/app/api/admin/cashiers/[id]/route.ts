@@ -6,21 +6,31 @@ import bcrypt from "bcryptjs";
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
+    const { id } = context.params; // Извлечение параметров
     const session = await getServerSession(authOptions);
+
     if (!session || session.user?.role !== "ADMIN") {
       return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
     }
 
-    const { id } = params;
-    if (!id) {
-      return NextResponse.json({ message: "ID кассира не указан" }, { status: 400 });
+    // Проверяем, существует ли пользователь с ролью CASHIER
+    const cashier = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!cashier || cashier.role !== "CASHIER") {
+      return NextResponse.json({ message: "Кассир не найден" }, { status: 404 });
     }
 
-    await prisma.user.delete({ where: { id } });
-    return NextResponse.json({ message: "Кассир удалён" });
+    // Удаляем кассира
+    await prisma.user.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ message: "Кассир успешно удалён" });
   } catch (error) {
     console.error("Ошибка при удалении кассира:", error);
     return NextResponse.json({ message: "Ошибка сервера" }, { status: 500 });
@@ -29,29 +39,31 @@ export async function DELETE(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } // Исправлено: params теперь Promise
 ) {
   try {
+    const { id } = await context.params; // Асинхронное извлечение параметров
     const session = await getServerSession(authOptions);
+
     if (!session || session.user?.role !== "ADMIN") {
       return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
     }
 
-    const { id } = params;
-    if (!id) {
-      return NextResponse.json({ message: "ID кассира не указан" }, { status: 400 });
-    }
+    const body = await request.json();
+    const { email, password } = body;
 
-    const { password } = await request.json();
-    if (!password || password.length < 6) {
-      return NextResponse.json({ message: "Пароль слишком короткий" }, { status: 400 });
-    }
+    const updatedData: { email?: string; passwordHash?: string } = {};
+    if (email) updatedData.email = email;
+    if (password) updatedData.passwordHash = await bcrypt.hash(password, 10);
 
-    const hashed = await bcrypt.hash(password, 10);
-    await prisma.user.update({ where: { id }, data: { password: hashed } });
-    return NextResponse.json({ message: "Пароль обновлён" });
+    const cashier = await prisma.cashier.update({
+      where: { id },
+      data: updatedData,
+    });
+
+    return NextResponse.json({ cashier });
   } catch (error) {
-    console.error("Ошибка при обновлении пароля кассира:", error);
+    console.error("Ошибка при обновлении кассира:", error);
     return NextResponse.json({ message: "Ошибка сервера" }, { status: 500 });
   }
 }

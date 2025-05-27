@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import clsx from "clsx";
 import { FiHome, FiLogOut, FiUsers, FiPackage, FiArchive, FiAlertCircle } from "react-icons/fi";
-import { useState, useEffect, useMemo, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 
 // Импортируем вынесенные компоненты
 import CashierEditModal from "./components/CashierEditModal";
@@ -59,20 +59,6 @@ export default function AdminPage() {
   const [isLoadingStoreAction, setIsLoadingStoreAction] = useState(false);
   const [editStore, setEditStore] = useState<Store | null>(null);
   const [searchTermStores, setSearchTermStores] = useState("");
-
-  // --- Filtered Data ---
-  const filteredCashiers = useMemo(
-    () => cashiers.filter((c) => c.email.toLowerCase().includes(searchTermCashiers.toLowerCase())),
-    [cashiers, searchTermCashiers]
-  );
-  const filteredProducts = useMemo(
-    () => products.filter((p) => p.name.toLowerCase().includes(searchTermProducts.toLowerCase())),
-    [products, searchTermProducts]
-  );
-  const filteredStores = useMemo(
-    () => stores.filter((s) => s.name.toLowerCase().includes(searchTermStores.toLowerCase())),
-    [stores, searchTermStores]
-  );
 
   // --- Data Fetching ---
   useEffect(() => {
@@ -179,29 +165,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleChangeCashierPassword = async (id: string) => {
-    const newPassword = prompt("Введите новый пароль для кассира (минимум 6 символов):");
-    if (newPassword && newPassword.length >= 6) {
-        setIsLoadingCashierAction(true);
-        setCashierMessage(null);
-        try {
-            await fetch(`/api/admin/cashiers/${id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ password: newPassword }),
-            });
-            setCashierMessage({text: "Пароль кассира успешно обновлён.", type: "success"});
-        } catch (err) {
-            console.error("Change password error:", err);
-            setCashierMessage({text: "Ошибка при смене пароля.", type: "error"});
-        } finally {
-            setIsLoadingCashierAction(false);
-        }
-    } else if (newPassword) {
-        setCashierMessage({text: "Пароль должен содержать не менее 6 символов.", type: "error"});
-    }
-  };
-  
   const resetProductForm = () => {
     setProductName("");
     setProductPurchasePrice("");
