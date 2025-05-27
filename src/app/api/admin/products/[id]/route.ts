@@ -11,7 +11,22 @@ export async function GET(
   context: { params: { id: string } }
 ) {
   const { id } = context.params;
-  // Ваш код
+
+  // Проверяем, существует ли товар
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: {
+      storeProducts: {
+        include: { store: true },
+      },
+    },
+  });
+
+  if (!product) {
+    return NextResponse.json({ message: "Товар не найден" }, { status: 404 });
+  }
+
+  return NextResponse.json({ product });
 }
 
 // Обновление товара по id (PATCH /api/admin/products/[id])
@@ -19,8 +34,9 @@ export async function PATCH(
   req: Request,
   context: { params: { id: string } }
 ) {
-  const { id } = context.params; // Оставляем только эту строку
+  const { id } = context.params;
   const session = await getServerSession(authOptions);
+
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
   }
@@ -44,21 +60,27 @@ export async function PATCH(
 
   const storeIds = formData.getAll("storeIds") as string[];
 
+  // Проверяем, что переданы магазины
+  if (storeIds.length === 0) {
+    return NextResponse.json(
+      { message: "Выберите хотя бы один магазин." },
+      { status: 400 }
+    );
+  }
+
   // 1. Удаляем все старые связи товара с магазинами
   await prisma.storeProduct.deleteMany({
     where: { productId: id },
   });
 
   // 2. Создаём новые связи
-  if (storeIds.length > 0) {
-    await prisma.storeProduct.createMany({
-      data: storeIds.map(storeId => ({
-        storeId,
-        productId: id,
-      })),
-      skipDuplicates: true,
-    });
-  }
+  await prisma.storeProduct.createMany({
+    data: storeIds.map((storeId) => ({
+      storeId,
+      productId: id,
+    })),
+    skipDuplicates: true,
+  });
 
   // 3. Обновляем сам товар
   const product = await prisma.product.update({
@@ -85,8 +107,9 @@ export async function DELETE(
   req: Request,
   context: { params: { id: string } }
 ) {
-  const { id } = context.params; // Оставляем только эту строку
+  const { id } = context.params;
   const session = await getServerSession(authOptions);
+
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
   }
