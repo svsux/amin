@@ -1,35 +1,29 @@
+// src/app/api/admin/cashiers/[id]/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 
+// Удаление кассира
 export async function DELETE(
   request: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params; // Извлечение параметров
+    const { id } = params;
     const session = await getServerSession(authOptions);
 
     if (!session || session.user?.role !== "ADMIN") {
       return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
     }
 
-    // Проверяем, существует ли пользователь с ролью CASHIER
-    const cashier = await prisma.user.findUnique({
-      where: { id },
-    });
-
+    const cashier = await prisma.user.findUnique({ where: { id } });
     if (!cashier || cashier.role !== "CASHIER") {
       return NextResponse.json({ message: "Кассир не найден" }, { status: 404 });
     }
 
-    // Удаляем кассира
-    await prisma.user.delete({
-      where: { id },
-    });
-
+    await prisma.user.delete({ where: { id } });
     return NextResponse.json({ message: "Кассир успешно удалён" });
   } catch (error) {
     console.error("Ошибка при удалении кассира:", error);
@@ -37,12 +31,13 @@ export async function DELETE(
   }
 }
 
+// Обновление кассира
 export async function PATCH(
   request: Request,
-  context: { params: Promise<{ id: string }> } // Исправлено: params теперь Promise
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await context.params; // Асинхронное извлечение параметров
+    const { id } = params;
     const session = await getServerSession(authOptions);
 
     if (!session || session.user?.role !== "ADMIN") {
@@ -56,12 +51,17 @@ export async function PATCH(
     if (email) updatedData.email = email;
     if (password) updatedData.passwordHash = await bcrypt.hash(password, 10);
 
-    const cashier = await prisma.cashier.update({
+    const cashier = await prisma.user.findUnique({ where: { id } });
+    if (!cashier || cashier.role !== "CASHIER") {
+      return NextResponse.json({ message: "Кассир не найден" }, { status: 404 });
+    }
+
+    const updatedCashier = await prisma.user.update({
       where: { id },
       data: updatedData,
     });
 
-    return NextResponse.json({ cashier });
+    return NextResponse.json({ cashier: updatedCashier });
   } catch (error) {
     console.error("Ошибка при обновлении кассира:", error);
     return NextResponse.json({ message: "Ошибка сервера" }, { status: 500 });

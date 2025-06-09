@@ -1,21 +1,15 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "next-auth/react"; // Удалено signOut
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import clsx from "clsx";
-import { FiHome, FiLogOut, FiUsers, FiPackage, FiArchive, FiAlertCircle } from "react-icons/fi";
 import { useState, useEffect, FormEvent } from "react";
+import { FiHome, FiUsers, FiPackage, FiArchive, FiAlertCircle } from "react-icons/fi"; // Удалено FiLogOut
+import Header from "./components/Header";
+import TabNavigation from "./components/TabNavigation";
+import Footer from "./components/Footer";
+import MainContent from "./components/MainContent";
 
-// Импортируем вынесенные компоненты
-import CashierEditModal from "./components/CashierEditModal";
-
-// Импортируем секции
-import CashiersSection from "./sections/CashiersSection";
-import ProductsSection from "./sections/ProductsSection";
-import StoresSection from "./sections/StoresSection";
-
-// Импортируем типы
+// Типы
 import type { Cashier, Product, Store } from "./types";
 
 export default function AdminPage() {
@@ -24,7 +18,7 @@ export default function AdminPage() {
 
   const [tab, setTab] = useState<"cashiers" | "products" | "stores">("cashiers");
 
-  // --- Cashiers State ---
+  // --- Состояния ---
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [cashiers, setCashiers] = useState<Cashier[]>([]);
@@ -33,9 +27,7 @@ export default function AdminPage() {
   const [isLoadingCashierAction, setIsLoadingCashierAction] = useState(false);
   const [searchTermCashiers, setSearchTermCashiers] = useState("");
   const [editingCashier, setEditingCashier] = useState<Cashier | null>(null);
-  const [isCashierEditModalOpen, setIsCashierEditModalOpen] = useState(false);
 
-  // --- Products State ---
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productName, setProductName] = useState("");
@@ -49,7 +41,6 @@ export default function AdminPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
 
-  // --- Stores State ---
   const [stores, setStores] = useState<Store[]>([]);
   const [loadingStores, setLoadingStores] = useState(false);
   const [storeName, setStoreName] = useState("");
@@ -60,7 +51,7 @@ export default function AdminPage() {
   const [editStore, setEditStore] = useState<Store | null>(null);
   const [searchTermStores, setSearchTermStores] = useState("");
 
-  // --- Data Fetching ---
+  // --- Загрузка данных ---
   useEffect(() => {
     const fetchAllData = async () => {
       if (session?.user?.role === "ADMIN") {
@@ -100,7 +91,7 @@ export default function AdminPage() {
     }
   }, [session, status]);
 
-  // --- Authentication & Authorization ---
+  // --- Аутентификация и авторизация ---
   if (status === "loading") {
     return <div className="flex justify-center items-center min-h-screen text-lg font-semibold text-gray-700">Загрузка данных администратора...</div>;
   }
@@ -114,9 +105,12 @@ export default function AdminPage() {
         <FiAlertCircle className="text-red-500 w-16 h-16 mb-4" />
         <h1 className="text-3xl font-bold text-red-600 mb-4">Доступ запрещен</h1>
         <p className="text-gray-700 mb-6">У вас нет прав для доступа к этой странице.</p>
-        <Link href="/" className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors flex items-center gap-2">
+        <button
+          onClick={() => router.push("/")}
+          className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors flex items-center gap-2"
+        >
           <FiHome /> Вернуться на главную
-        </Link>
+        </button>
       </div>
     );
   }
@@ -322,177 +316,81 @@ export default function AdminPage() {
     }
   };
 
-  const handleSaveCashierEdit = async (updated: { email: string; password?: string }) => {
-    if (!editingCashier) return;
-    setIsLoadingCashierAction(true);
-    try {
-      const response = await fetch(`/api/admin/cashiers/${editingCashier.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updated),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setCashiers((prev) =>
-          prev.map((c) => (c.id === editingCashier.id ? { ...c, email: updated.email } : c))
-        );
-        setIsCashierEditModalOpen(false);
-        setEditingCashier(null);
-        setCashierMessage({ text: "Кассир успешно обновлён.", type: "success" });
-      } else {
-        setCashierMessage({ text: data.message || "Ошибка при обновлении кассира.", type: "error" });
-      }
-    } catch (err) {
-      console.error("Ошибка при обновлении кассира:", err);
-      setCashierMessage({ text: "Ошибка сети при обновлении кассира.", type: "error" });
-    } finally {
-      setIsLoadingCashierAction(false);
-    }
-  };
-
   // --- Tab Navigation ---
-  const tabItems = [
-    { key: "cashiers", label: "Кассиры", icon: <FiUsers /> },
-    { key: "products", label: "Товары", icon: <FiPackage /> },
-    { key: "stores", label: "Магазины", icon: <FiArchive /> },
-  ];
-
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-md sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-3">
-              <FiHome className="text-indigo-600 h-8 w-8" />
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Панель администратора</h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600 hidden sm:block">Привет, {session?.user?.email}</span>
-              <Link
-                href="/"
-                className="text-sm text-indigo-600 hover:text-indigo-800 font-semibold transition-colors flex items-center gap-1"
-              >
-                <FiLogOut /> На главную
-              </Link>
-            </div>
-          </div>
-          <nav className="flex border-b border-gray-200">
-            {tabItems.map((t) => (
-              <button
-                key={t.key}
-                className={clsx(
-                  "py-3 px-4 sm:px-6 font-semibold flex items-center gap-2 transition-all duration-150 ease-in-out -mb-px",
-                  tab === t.key
-                    ? "border-b-2 border-indigo-600 text-indigo-700"
-                    : "text-gray-500 hover:text-gray-700 hover:border-gray-300 border-b-2 border-transparent"
-                )}
-                onClick={() => {
-                  setTab(t.key as "cashiers" | "products" | "stores");
-                  setCashierMessage(null);
-                  setProductMessage(null);
-                  setStoreMessage(null);
-                }}
-              >
-                {t.icon}
-                <span className="hidden sm:inline">{t.label}</span>
-                <span className="sm:hidden">{t.label.substring(0, 3)}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
-      </header>
-
+      <Header userEmail={session?.user?.email || null} />
+      <TabNavigation currentTab={tab} onTabChange={setTab} />
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          {tab === "cashiers" && (
-            <CashiersSection
-              email={email}
-              password={password}
-              cashiers={cashiers}
-              loadingCashiers={loadingCashiers}
-              cashierMessage={cashierMessage}
-              isLoadingCashierAction={isLoadingCashierAction}
-              searchTermCashiers={searchTermCashiers}
-              setEmail={setEmail}
-              setPassword={setPassword}
-              setSearchTermCashiers={setSearchTermCashiers}
-              handleCreateCashier={handleCreateCashier}
-              handleDeleteCashier={handleDeleteCashier}
-              openEditCashierModal={(cashier) => {
-                setEditingCashier(cashier);
-                setIsCashierEditModalOpen(true);
-              }}
-            />
-          )}
-          {tab === "products" && (
-            <ProductsSection
-              products={products}
-              loadingProducts={loadingProducts}
-              productMessage={productMessage}
-              isLoadingProductAction={isLoadingProductAction}
-              productName={productName}
-              productPurchasePrice={productPurchasePrice}
-              productSalePrice={productSalePrice}
-              productImage={productImage}
-              productQuantity={productQuantity}
-              searchTermProducts={searchTermProducts}
-              editingProduct={editingProduct}
-              selectedStores={selectedStores}
-              stores={stores}
-              setProductName={setProductName}
-              setProductPurchasePrice={setProductPurchasePrice}
-              setProductSalePrice={setProductSalePrice}
-              setProductImage={setProductImage}
-              setProductQuantity={setProductQuantity}
-              setSearchTermProducts={setSearchTermProducts}
-              setSelectedStores={setSelectedStores}
-              handleProductSubmit={handleProductSubmit}
-              handleEditProduct={handleEditProduct}
-              handleDeleteProduct={handleDeleteProduct}
-              resetProductForm={resetProductForm} // Добавлено
-            />
-          )}
-          {tab === "stores" && (
-            <StoresSection
-              storeName={storeName}
-              storeAddress={storeAddress}
-              selectedCashiers={selectedCashiers}
-              stores={stores}
-              cashiers={cashiers}
-              loadingStores={loadingStores}
-              storeMessage={storeMessage}
-              isLoadingStoreAction={isLoadingStoreAction}
-              editStore={editStore}
-              searchTermStores={searchTermStores}
-              setStoreName={setStoreName}
-              setStoreAddress={setStoreAddress}
-              setSelectedCashiers={setSelectedCashiers}
-              setSearchTermStores={setSearchTermStores}
-              handleStoreSubmit={handleStoreSubmit}
-              handleEditStore={handleEditStore}
-              handleDeleteStore={handleDeleteStore}
-              resetStoreForm={resetStoreForm} // Добавлено
-              setStoreMessage={setStoreMessage} // Добавлено
-            />
-          )}
-        </div>
-      </main>
-      <footer className="text-center py-8 text-sm text-gray-500">
-        © {new Date().getFullYear()} Smart Stash. Все права защищены.
-      </footer>
-
-      {tab === "cashiers" && (
-        <CashierEditModal
-          cashier={editingCashier}
-          open={isCashierEditModalOpen}
-          onClose={() => {
-            setIsCashierEditModalOpen(false);
-            setEditingCashier(null);
+        <MainContent
+          tab={tab}
+          cashiersProps={{
+            email,
+            password,
+            cashiers,
+            loadingCashiers,
+            cashierMessage,
+            isLoadingCashierAction,
+            searchTermCashiers,
+            setEmail,
+            setPassword,
+            setSearchTermCashiers,
+            handleCreateCashier,
+            handleDeleteCashier,
+            openEditCashierModal: (cashier) => {
+              setEditingCashier(cashier);
+            },
           }}
-          onSave={handleSaveCashierEdit}
-          isLoading={isLoadingCashierAction}
+          productsProps={{
+            products,
+            loadingProducts,
+            productMessage,
+            isLoadingProductAction,
+            productName,
+            productPurchasePrice,
+            productSalePrice,
+            productImage,
+            productQuantity,
+            searchTermProducts,
+            editingProduct,
+            selectedStores,
+            stores,
+            setProductName,
+            setProductPurchasePrice,
+            setProductSalePrice,
+            setProductImage,
+            setProductQuantity,
+            setSearchTermProducts,
+            setSelectedStores,
+            handleProductSubmit,
+            handleEditProduct,
+            handleDeleteProduct,
+            resetProductForm,
+          }}
+          storesProps={{
+            storeName,
+            storeAddress,
+            selectedCashiers,
+            stores,
+            cashiers,
+            loadingStores,
+            storeMessage,
+            isLoadingStoreAction,
+            editStore,
+            searchTermStores,
+            setStoreName,
+            setStoreAddress,
+            setSelectedCashiers,
+            setSearchTermStores,
+            handleStoreSubmit,
+            handleEditStore,
+            handleDeleteStore,
+            resetStoreForm,
+            setStoreMessage, // Добавлено
+          }}
         />
-      )}
+      </main>
+      <Footer />
     </div>
   );
 }
