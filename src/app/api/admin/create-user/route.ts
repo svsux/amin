@@ -1,87 +1,81 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/authOptions"; // Убедитесь, что путь к authOptions верный
-import prisma from "@/lib/prisma"; // Убедитесь, что путь к prisma client верный
-import bcrypt from "bcryptjs";
+import { authOptions } from "@/lib/authOptions";
+import prisma from "@/lib/prisma";
+import bcrypt from "bcrypt";
 
-// Определяем UserRole вручную, если он не экспортируется из @prisma/client
+// Роли вручную, если не импортируешь из @prisma/client
 enum UserRole {
   ADMIN = "ADMIN",
   USER = "USER",
   CASHIER = "CASHIER",
-  // Добавьте другие роли, если они есть в вашей Prisma схеме
 }
 
 export async function POST(req: Request) {
   try {
-    // 1. Проверка сессии и роли администратора
+    // 1. Проверка сессии
     const session = await getServerSession(authOptions);
     if (!session || session.user?.role !== "ADMIN") {
       return NextResponse.json(
-        { message: "Доступ запрещен: требуется авторизация администратора." },
+        { message: "Доступ запрещён: только для администратора." },
         { status: 403 }
       );
     }
 
-    // 2. Получение данных из тела запроса
+    // 2. Парсинг тела запроса
     const { email, password, role } = (await req.json()) as {
       email?: string;
       password?: string;
-      role?: UserRole; // Используем тип UserRole
+      role?: UserRole;
     };
 
-    // 3. Валидация входных данных
+    // 3. Валидация
     if (!email || !password || !role) {
       return NextResponse.json(
-        { message: "Отсутствуют обязательные поля: email, password, role." },
+        { message: "Заполните email, пароль и роль." },
         { status: 400 }
       );
     }
 
     if (password.length < 6) {
       return NextResponse.json(
-        { message: "Пароль должен содержать не менее 6 символов." },
+        { message: "Пароль должен содержать минимум 6 символов." },
         { status: 400 }
       );
     }
 
-    // Проверка, является ли роль допустимой
     if (!Object.values(UserRole).includes(role)) {
       return NextResponse.json(
-        { message: "Недопустимая роль пользователя." },
+        { message: "Недопустимая роль." },
         { status: 400 }
       );
     }
 
-    // 4. Проверка, существует ли пользователь с таким email
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
+    // 4. Проверка на существующего пользователя
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return NextResponse.json(
         { message: "Пользователь с таким email уже существует." },
-        { status: 409 } // Conflict
+        { status: 409 }
       );
     }
 
-    // 5. Хеширование пароля
+    // 5. Хеш пароля
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 6. Создание пользователя в базе данных
+    // 6. Создание пользователя
     const newUser = await prisma.user.create({
       data: {
         email,
-        password: hashedPassword,
-        role, // Используем полученную роль
+        passwordHash: hashedPassword, // ✅ ← исправлено здесь
+        role,
       },
     });
 
-    // Не возвращаем пароль в ответе
-    const { password: _, ...userWithoutPassword } = newUser;
+    const { passwordHash, ...userWithoutPassword } = newUser;
 
     return NextResponse.json(
-      { message: "Пользователь успешно создан.", user: userWithoutPassword },
+      { message: "Пользователь создан.", user: userWithoutPassword },
       { status: 201 }
     );
   } catch (error) {

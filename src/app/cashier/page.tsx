@@ -1,7 +1,7 @@
 // filepath: c:\Users\murza\Desktop\Stash\amin\src\app\cashier\page.tsx
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react"; // Добавлено signOut
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -38,9 +38,12 @@ export default function CashierPage() {
       <header className="mb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900">Касса</h1>
-          <Link href="/" className="text-sm text-blue-600 hover:text-blue-800">
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })} // Добавлено действие выхода
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
             На главную
-          </Link>
+          </button>
         </div>
       </header>
 

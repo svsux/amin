@@ -1,11 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
+  engineType = "binary"
 }
 
 datasource db {
@@ -16,7 +11,7 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
-  password      String    // Пароль будет храниться в зашифрованном виде
+  passwordHash  String
   role          UserRole  @default(USER)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -72,8 +67,8 @@ model VerificationToken {
 model Product {
   id             String   @id @default(uuid())
   name           String
-  purchasePrice  Float    // Сделано обязательным
-  salePrice      Float    // Сделано обязательным
+  purchasePrice  Float
+  salePrice      Float
   imageUrl       String?
   quantity       Int
   createdAt      DateTime @default(now())
@@ -83,7 +78,7 @@ model Product {
 model Store {
   id        String    @id @default(uuid())
   name      String
-  address   String    // Сделано обязательным
+  address   String
   cashiers  StoreCashier[]
   products  StoreProduct[]
   createdAt DateTime   @default(now())
@@ -104,5 +99,5 @@ model StoreProduct {
   product   Product  @relation(fields: [productId], references: [id])
   productId String
 
-  @@unique([storeId, productId]) // Уникальная связь
+  @@unique([storeId, productId])
 }

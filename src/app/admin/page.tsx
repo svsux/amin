@@ -1,13 +1,15 @@
 "use client";
 
-import { useSession } from "next-auth/react"; // Удалено signOut
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, FormEvent } from "react";
-import { FiHome, FiUsers, FiPackage, FiArchive, FiAlertCircle } from "react-icons/fi"; // Удалено FiLogOut
+import { FiHome, FiUsers, FiPackage, FiArchive, FiAlertCircle } from "react-icons/fi";
 import Header from "./components/Header";
 import TabNavigation from "./components/TabNavigation";
 import Footer from "./components/Footer";
 import MainContent from "./components/MainContent";
+import CashierEditModal from "./components/CashierEditModal";
+import ConfirmDialog from "./components/ConfirmDialog"; // Убедитесь, что путь корректный
 
 // Типы
 import type { Cashier, Product, Store } from "./types";
@@ -27,6 +29,11 @@ export default function AdminPage() {
   const [isLoadingCashierAction, setIsLoadingCashierAction] = useState(false);
   const [searchTermCashiers, setSearchTermCashiers] = useState("");
   const [editingCashier, setEditingCashier] = useState<Cashier | null>(null);
+  const [isCashierEditModalOpen, setIsCashierEditModalOpen] = useState(false);
+
+  // Новые состояния для подтверждения удаления
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [cashierToDelete, setCashierToDelete] = useState<Cashier | null>(null);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -91,14 +98,23 @@ export default function AdminPage() {
     }
   }, [session, status]);
 
-  // --- Аутентификация и авторизация ---
+  // --- Аутентификация и авторизация (ИСПРАВЛЕННЫЙ БЛОК) ---
+  useEffect(() => {
+    // Выполняем перенаправление после рендеринга, если пользователь не аутентифицирован
+    if (status === "unauthenticated") {
+      router.replace("/login");
+    }
+  }, [status, router]);
+
   if (status === "loading") {
     return <div className="flex justify-center items-center min-h-screen text-lg font-semibold text-gray-700">Загрузка данных администратора...</div>;
   }
+
+  // Пока происходит перенаправление, показываем сообщение
   if (status === "unauthenticated") {
-    router.replace("/login");
     return <div className="flex justify-center items-center min-h-screen text-lg">Перенаправление на страницу входа...</div>;
   }
+
   if (session?.user?.role !== "ADMIN") {
     return (
       <div className="flex flex-col justify-center items-center min-h-screen text-center p-8">
@@ -131,7 +147,8 @@ export default function AdminPage() {
         setCashierMessage({ text: `Кассир ${data.user.email} успешно создан!`, type: "success" });
         setEmail("");
         setPassword("");
-        setCashiers((prev) => [data.user as Cashier, ...prev]); // Add to start for visibility
+        setCashierMessage(null); // Добавлено
+        setCashiers((prev) => [data.user as Cashier, ...prev]);
       } else {
         setCashierMessage({ text: data.message || "Ошибка при создании кассира.", type: "error" });
       }
@@ -144,18 +161,18 @@ export default function AdminPage() {
   };
 
   const handleDeleteCashier = async (id: string) => {
-    if (!confirm("Вы уверены, что хотите удалить этого кассира? Это действие необратимо.")) return;
+    // Удален вызов confirm(...)
     setIsLoadingCashierAction(true);
     setCashierMessage(null);
     try {
-        await fetch(`/api/admin/cashiers/${id}`, { method: "DELETE" });
-        setCashiers((prev) => prev.filter((u) => u.id !== id));
-        setCashierMessage({text: "Кассир успешно удален.", type: "success"});
+      await fetch(`/api/admin/cashiers/${id}`, { method: "DELETE" });
+      setCashiers((prev) => prev.filter((cashier) => cashier.id !== id));
+      setCashierMessage({ text: "Кассир успешно удален.", type: "success" });
     } catch (err) {
-        console.error("Delete cashier error:", err);
-        setCashierMessage({text: "Ошибка при удалении кассира.", type: "error"});
+      console.error("Ошибка при удалении кассира:", err);
+      setCashierMessage({ text: "Ошибка при удалении кассира.", type: "error" });
     } finally {
-        setIsLoadingCashierAction(false);
+      setIsLoadingCashierAction(false);
     }
   };
 
@@ -181,7 +198,6 @@ export default function AdminPage() {
     formData.append("salePrice", productSalePrice);
     formData.append("quantity", productQuantity);
     if (productImage) formData.append("image", productImage);
-    // Добавьте выбранные магазины
     selectedStores.forEach((storeId) => formData.append("storeIds", storeId));
 
     const url = editingProduct ? `/api/admin/products/${editingProduct.id}` : "/api/admin/products";
@@ -209,7 +225,7 @@ export default function AdminPage() {
       setIsLoadingProductAction(false);
     }
   };
-  
+
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setProductName(product.name);
@@ -217,7 +233,6 @@ export default function AdminPage() {
     setProductSalePrice(String(product.salePrice));
     setProductQuantity(String(product.quantity));
     setProductImage(null);
-    // Заполнить магазины, где есть этот товар
     const storeIdsWithProduct = stores
       .filter(store => store.products.some(p => p.productId === product.id))
       .map(store => store.id);
@@ -228,20 +243,19 @@ export default function AdminPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-
   const handleDeleteProduct = async (id: string) => {
     if (!confirm("Вы уверены, что хотите удалить этот товар? Это действие необратимо.")) return;
     setIsLoadingProductAction(true);
     setProductMessage(null);
     try {
-        await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
-        setProducts((prev) => prev.filter((p) => p.id !== id));
-        setProductMessage({ text: "Товар успешно удален.", type: "success"});
+      await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+      setProductMessage({ text: "Товар успешно удален.", type: "success" });
     } catch (err) {
-        console.error("Delete product error:", err);
-        setProductMessage({ text: "Ошибка при удалении товара.", type: "error"});
+      console.error("Delete product error:", err);
+      setProductMessage({ text: "Ошибка при удалении товара.", type: "error" });
     } finally {
-        setIsLoadingProductAction(false);
+      setIsLoadingProductAction(false);
     }
   };
 
@@ -257,40 +271,40 @@ export default function AdminPage() {
     setIsLoadingStoreAction(true);
     setStoreMessage(null);
     const payload = {
-        name: storeName,
-        address: storeAddress,
-        cashierIds: selectedCashiers,
+      name: storeName,
+      address: storeAddress,
+      cashierIds: selectedCashiers,
     };
     const url = editStore ? `/api/admin/stores/${editStore.id}` : "/api/admin/stores";
     const method = editStore ? "PATCH" : "POST";
 
     try {
-        const res = await fetch(url, {
-            method,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (res.ok) {
-            if (editStore) {
-                setStores((prev) => prev.map((s) => (s.id === data.store.id ? data.store as Store : s)));
-                setStoreMessage({ text: "Магазин успешно обновлён!", type: "success" });
-            } else {
-                setStores((prev) => [data.store as Store, ...prev]);
-                setStoreMessage({ text: "Магазин успешно создан!", type: "success" });
-            }
-            resetStoreForm();
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (editStore) {
+          setStores((prev) => prev.map((s) => (s.id === data.store.id ? data.store as Store : s)));
+          setStoreMessage({ text: "Магазин успешно обновлён!", type: "success" });
         } else {
-            setStoreMessage({ text: data.message || `Ошибка при ${editStore ? 'обновлении' : 'создании'} магазина.`, type: "error" });
+          setStores((prev) => [data.store as Store, ...prev]);
+          setStoreMessage({ text: "Магазин успешно создан!", type: "success" });
         }
+        resetStoreForm();
+      } else {
+        setStoreMessage({ text: data.message || `Ошибка при ${editStore ? 'обновлении' : 'создании'} магазина.`, type: "error" });
+      }
     } catch (err) {
-        console.error("Store submit error:", err);
-        setStoreMessage({ text: `Ошибка сети при ${editStore ? 'обновлении' : 'создании'} магазина.`, type: "error" });
+      console.error("Store submit error:", err);
+      setStoreMessage({ text: `Ошибка сети при ${editStore ? 'обновлении' : 'создании'} магазина.`, type: "error" });
     } finally {
-        setIsLoadingStoreAction(false);
+      setIsLoadingStoreAction(false);
     }
   };
-  
+
   const handleEditStore = (store: Store) => {
     setEditStore(store);
     setStoreName(store.name);
@@ -305,14 +319,47 @@ export default function AdminPage() {
     setIsLoadingStoreAction(true);
     setStoreMessage(null);
     try {
-        await fetch(`/api/admin/stores/${id}`, { method: "DELETE" });
-        setStores((prev) => prev.filter((s) => s.id !== id));
-        setStoreMessage({ text: "Магазин успешно удален.", type: "success"});
+      await fetch(`/api/admin/stores/${id}`, { method: "DELETE" });
+      setStores((prev) => prev.filter((s) => s.id !== id));
+      setStoreMessage({ text: "Магазин успешно удален.", type: "success" });
     } catch (err) {
-        console.error("Delete store error:", err);
-        setStoreMessage({ text: "Ошибка при удалении магазина.", type: "error"});
+      console.error("Delete store error:", err);
+      setStoreMessage({ text: "Ошибка при удалении магазина.", type: "error" });
     } finally {
-        setIsLoadingStoreAction(false);
+      setIsLoadingStoreAction(false);
+    }
+  };
+
+  // Добавьте функцию handleSaveCashierEdit
+  const handleSaveCashierEdit = async (updatedCashier: { email: string; password?: string }) => {
+    if (!editingCashier) return;
+
+    setIsLoadingCashierAction(true);
+    setCashierMessage(null);
+
+    try {
+      const response = await fetch(`/api/admin/cashiers/${editingCashier.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedCashier),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setCashiers((prev) =>
+          prev.map((cashier) => (cashier.id === editingCashier.id ? { ...cashier, ...data.cashier } : cashier))
+        );
+        setCashierMessage({ text: "Кассир успешно обновлен!", type: "success" });
+        setIsCashierEditModalOpen(false); // Закрытие модального окна
+        setEditingCashier(null); // Сброс текущего кассира
+      } else {
+        setCashierMessage({ text: data.message || "Ошибка при обновлении кассира.", type: "error" });
+      }
+    } catch (err) {
+      console.error("Ошибка при обновлении кассира:", err);
+      setCashierMessage({ text: "Ошибка сети при обновлении кассира.", type: "error" });
+    } finally {
+      setIsLoadingCashierAction(false);
     }
   };
 
@@ -336,9 +383,16 @@ export default function AdminPage() {
             setPassword,
             setSearchTermCashiers,
             handleCreateCashier,
-            handleDeleteCashier,
             openEditCashierModal: (cashier) => {
               setEditingCashier(cashier);
+              setIsCashierEditModalOpen(true); // Открытие модального окна
+            },
+            handleDeleteCashier: (id: string) => {
+              const foundCashier = cashiers.find((cashier) => cashier.id === id); // Находим кассира по id
+              if (foundCashier) {
+                setCashierToDelete(foundCashier); // Устанавливаем объект кассира
+                setDeleteConfirmOpen(true); // Открытие модального окна подтверждения
+              }
             },
           }}
           productsProps={{
@@ -386,11 +440,42 @@ export default function AdminPage() {
             handleEditStore,
             handleDeleteStore,
             resetStoreForm,
-            setStoreMessage, // Добавлено
+            setStoreMessage,
           }}
         />
       </main>
       <Footer />
+
+      {/* Модальное окно редактирования кассира */}
+      {editingCashier && isCashierEditModalOpen && (
+        <CashierEditModal
+          cashier={editingCashier}
+          open={isCashierEditModalOpen} // Исправлено: добавлен проп `open`
+          onClose={() => {
+            setIsCashierEditModalOpen(false);
+            setEditingCashier(null);
+          }}
+          onSave={handleSaveCashierEdit}
+          isLoading={isLoadingCashierAction} // Исправлено: добавлен проп `isLoading`
+        />
+      )}
+
+      {/* Модальное окно подтверждения удаления */}
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        message={`Вы уверены, что хотите удалить ${cashierToDelete?.email || "неизвестного кассира"}? Это действие необратимо.`}
+        onCancel={() => {
+          setDeleteConfirmOpen(false);
+          setCashierToDelete(null);
+        }}
+        onConfirm={() => {
+          if (cashierToDelete) {
+            handleDeleteCashier(cashierToDelete.id);
+            setDeleteConfirmOpen(false);
+            setCashierToDelete(null);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -14,7 +14,7 @@ export default function TabNavigation({ currentTab, onTabChange }: TabNavigation
   ];
 
   return (
-    <nav className="flex border-b border-gray-200">
+    <nav className="flex justify-center border-b border-gray-200">
       {tabItems.map((t) => (
         <button
           key={t.key}

@@ -91,7 +91,7 @@ export default function Home() {
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2, duration: 0.6 }}
         >
-          © 2025 SmartPoint. Все права защищены.
+          © {new Date().getFullYear()} SmartPoint. Все права защищены.
         </motion.footer>
       </motion.div>
     </div>
