@@ -171,17 +171,60 @@ export default function AdminPage() {
   const executeDeleteCashier = async (id: string) => {
     setIsLoadingCashierAction(true);
     setCashierMessage(null);
+
     try {
-      await fetch(`/api/admin/cashiers/${id}`, { method: "DELETE" });
+      // Удалено: console.log("Client: ID кассира для удаления:", id);
+      const response = await fetch(`/api/admin/cashiers/${id}`, { method: "DELETE" });
+
+      if (!response.ok) {
+        let errorData: { message?: string } = {};
+        let responseBodyText = ""; 
+
+        try {
+          responseBodyText = await response.text(); 
+          // Удалено: console.log(`Client: Получено сырое тело ответа для статуса ${response.status}: "${responseBodyText}"`);
+
+          if (responseBodyText && responseBodyText.trim() !== "") {
+            errorData = JSON.parse(responseBodyText);
+          } else {
+            // Удалено: console.warn(`Client: Тело ответа было пустым для статуса ${response.status}.`);
+            errorData = { message: `Ошибка ${response.status}: Сервер вернул пустой ответ.` };
+          }
+        } catch (e) {
+          // Удалено: console.error(`Client: Не удалось обработать тело ответа. Статус: ${response.status}. Сырой текст: "${responseBodyText}". Ошибка:`, e);
+          errorData = { message: `Ошибка ${response.status}: Не удалось обработать ответ от сервера. (${(e as Error).message || 'неизвестная ошибка парсинга'})` };
+        }
+
+        if (response.status === 409) {
+          // Удалено: console.info("Client: Обработан конфликт при удалении кассира (409). Данные из ответа:", errorData);
+          setCashierMessage({
+            text: errorData?.message || "Невозможно удалить кассира, так как он связан с магазинами.",
+            type: "error",
+          });
+          return; 
+        } else {
+          // Удалено: console.error(`Client: Ошибка при удалении кассира (статус ${response.status}). Данные из ответа:`, errorData);
+          setCashierMessage({
+            text: errorData?.message || `Ошибка при удалении кассира (статус ${response.status}).`,
+            type: "error",
+          });
+          return; 
+        }
+      }
+
       setCashiers((prev) => prev.filter((cashier) => cashier.id !== id));
       setCashierMessage({ text: "Кассир успешно удален.", type: "success" });
-    } catch (err) {
-      console.error("Ошибка при удалении кассира:", err);
-      setCashierMessage({ text: "Ошибка при удалении кассира.", type: "error" });
+    } catch (err) { 
+      const error = err as Error;
+      // Удалено: console.error("Client: Непредвиденная ошибка в процессе удаления кассира:", error);
+      setCashierMessage({
+        text: error.message || "Произошла непредвиденная ошибка при удалении кассира.",
+        type: "error",
+      });
     } finally {
       setIsLoadingCashierAction(false);
-      setDeleteConfirmOpen(false); // Закрываем диалог
-      setCashierToDelete(null);   // Сбрасываем кассира для удаления
+      setDeleteConfirmOpen(false);
+      setCashierToDelete(null);
     }
   };
 
@@ -202,13 +245,16 @@ export default function AdminPage() {
     e.preventDefault();
     setIsLoadingProductAction(true);
     setProductMessage(null);
+
     const formData = new FormData();
     formData.append("name", productName);
     formData.append("purchasePrice", productPurchasePrice);
     formData.append("salePrice", productSalePrice);
     formData.append("quantity", productQuantity);
     if (productImage) formData.append("image", productImage);
-    selectedStores.forEach((storeId) => formData.append("storeIds", storeId));
+
+    // Убедитесь, что поле `stores` отправляется как JSON-строка
+    formData.append("stores", JSON.stringify(selectedStores || []));
 
     const url = editingProduct ? `/api/admin/products/${editingProduct.id}` : "/api/admin/products";
     const method = editingProduct ? "PATCH" : "POST";
@@ -218,7 +264,7 @@ export default function AdminPage() {
       const data = await res.json();
       if (res.ok) {
         if (editingProduct) {
-          setProducts((prev) => prev.map(p => p.id === data.product.id ? data.product as Product : p));
+          setProducts((prev) => prev.map((p) => (p.id === data.product.id ? data.product as Product : p)));
           setProductMessage({ text: "Товар успешно обновлен!", type: "success" });
         } else {
           setProducts((prev) => [data.product as Product, ...prev]);

@@ -94,7 +94,9 @@ const ProductsSection: React.FC<Props> = ({
   };
 
   const handleChange = (selectedOptions: readonly StoreOption[] | null) => {
-    setSelectedStores(selectedOptions ? selectedOptions.map((o) => o.value) : []);
+    const updatedStores = selectedOptions ? selectedOptions.map((o) => o.value) : [];
+    setSelectedStores(updatedStores);
+    console.log("Client: selectedStores после выбора:", updatedStores);
   };
 
   const openEditModal = (product: Product) => {
@@ -128,20 +130,15 @@ const ProductsSection: React.FC<Props> = ({
         formData.append("image", data.image);
       }
 
-      // ИСПРАВЛЕННЫЙ URL ЗАПРОСА
       const res = await fetch(`/api/admin/products/${editingProduct.id}`, {
         method: "PATCH",
         body: formData,
       });
 
       if (!res.ok) {
-        const errorMessage = await res.text(); 
+        const errorMessage = await res.text();
         console.error(`Ошибка при обновлении товара: ${errorMessage}`);
-        if (res.status === 404) {
-          throw new Error("Ошибка: маршрут не найден (404). Проверьте URL /api/admin/products/[id].");
-        } else {
-          throw new Error(`Ошибка при обновлении товара (${res.status}): ${errorMessage}`);
-        }
+        throw new Error(`Ошибка при обновлении товара (${res.status}): ${errorMessage}`);
       }
 
       const updatedProduct: Product = await res.json();
@@ -156,7 +153,6 @@ const ProductsSection: React.FC<Props> = ({
       closeEditModal();
     } catch (error) {
       console.error("❌ Ошибка обновления товара:", error);
-      // Здесь можно добавить уведомление для пользователя об ошибке
     }
   };
 
@@ -207,9 +203,9 @@ const ProductsSection: React.FC<Props> = ({
       )}
 
       {/* Добавление нового товара */}
-      <div className="bg-white/80 backdrop-blur-md border border-gray-200 shadow-xl rounded-2xl p-8 transition-all">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <FiPlus className="text-indigo-600" /> {/* ИЗМЕНЕНО */}
+      <div className="bg-white/80 backdrop-blur-md border border-gray-200 shadow-xl rounded-2xl p-6 sm:p-8 transition-all">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
+          <FiPlus className="text-indigo-600" />
           Добавить новый товар
         </h2>
 
@@ -217,7 +213,7 @@ const ProductsSection: React.FC<Props> = ({
           <Alert message={productMessage.text} type={productMessage.type || "info"} />
         )}
 
-        <form onSubmit={handleProductSubmit} className="space-y-5">
+        <form onSubmit={handleProductSubmit} className="space-y-4 sm:space-y-5">
           <InputField
             label="Название товара"
             id="product-name"
@@ -227,7 +223,7 @@ const ProductsSection: React.FC<Props> = ({
             placeholder="Например, Хлеб"
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
             <InputField
               label="Закупочная цена (₽)"
               id="product-purchase-price"
@@ -313,13 +309,13 @@ const ProductsSection: React.FC<Props> = ({
       </div>
 
       {/* Список товаров */}
-      <div className="bg-white/80 backdrop-blur-md border border-gray-200 shadow-xl rounded-2xl p-8 transition-all">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <FiPackage className="text-indigo-600" /> {/* ИЗМЕНЕНО */}
+      <div className="bg-white/80 backdrop-blur-md border border-gray-200 shadow-xl rounded-2xl p-6 sm:p-8 transition-all">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
+          <FiPackage className="text-indigo-600" />
           Список товаров
         </h2>
 
-        <div className="mb-6 relative">
+        <div className="mb-4 sm:mb-6 relative">
           <InputField
             label="Поиск по названию товара"
             id="search-product"
@@ -337,11 +333,11 @@ const ProductsSection: React.FC<Props> = ({
         ) : products.length === 0 ? (
           <p className="text-gray-600 text-center py-4">Товары не найдены или еще не добавлены.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-h-[60vh] overflow-y-auto pr-2">
             {products.map((product) => (
               <div
                 key={product.id}
-                className="bg-white rounded-xl border border-gray-200 shadow hover:shadow-md p-5 flex flex-col justify-between transition-all"
+                className="bg-white rounded-xl border border-gray-200 shadow hover:shadow-md p-4 sm:p-5 flex flex-col justify-between transition-all"
               >
                 <div className="flex items-center gap-4">
                   {product.imageUrl ? (
@@ -354,7 +350,7 @@ const ProductsSection: React.FC<Props> = ({
                     />
                   ) : (
                     <div className="w-[60px] h-[60px] bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
-                      <FiBox size={28} className="text-gray-500" /> {/* Можно изменить на text-indigo-600 */}
+                      <FiBox size={28} className="text-gray-500" />
                     </div>
                   )}
                   <div>
@@ -380,14 +376,14 @@ const ProductsSection: React.FC<Props> = ({
                   </div>
                 </div>
 
-                <div className="flex gap-3 mt-4">
+                <div className="flex gap-2 mt-4">
                   <PrimaryButton
                     type="button"
                     onClick={() => openEditModal(product)}
                     disabled={isLoadingProductAction}
                     className="flex-1"
                   >
-                    <FiEdit className="mr-2 text-white" /> {/* ИЗМЕНЕНО (если фон кнопки темный) или оставить currentColor */}
+                    <FiEdit className="mr-2 text-white" />
                     Редактировать
                   </PrimaryButton>
                   <DangerButton
@@ -395,7 +391,7 @@ const ProductsSection: React.FC<Props> = ({
                     disabled={isLoadingProductAction}
                     className="flex-1"
                   >
-                    <FiTrash className="mr-2 text-white" /> {/* ИЗМЕНЕНО (если фон кнопки темный) или оставить currentColor */}
+                    <FiTrash className="mr-2 text-white" />
                     Удалить
                   </DangerButton>
                 </div>
