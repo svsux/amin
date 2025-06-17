@@ -12,7 +12,16 @@ export async function GET() {
       return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
     }
 
-    const products = await prisma.product.findMany({ orderBy: { createdAt: "desc" } });
+    const products = await prisma.product.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        storeProducts: {
+          include: {
+            store: true,
+          },
+        },
+      },
+    });
     return NextResponse.json({ products });
   } catch (error) {
     console.error("Ошибка при получении списка товаров:", error);
@@ -29,15 +38,49 @@ export async function POST(req: Request) {
 
     const formData = await req.formData();
     const name = formData.get("name") as string;
-    const purchasePrice = parseFloat(formData.get("purchasePrice") as string);
-    const salePrice = parseFloat(formData.get("salePrice") as string);
-    const quantity = parseInt(formData.get("quantity") as string, 10) || 0;
+    const purchasePriceStr = formData.get("purchasePrice") as string;
+    const salePriceStr = formData.get("salePrice") as string;
+    const quantityStr = formData.get("quantity") as string;
     const image = formData.get("image") as File | null;
+    const storesRaw = formData.get("stores") as string | null;
 
-    // Проверка обязательных данных
-    if (!name || isNaN(purchasePrice) || isNaN(salePrice) || isNaN(quantity)) {
+    // Валидация основных полей
+    if (!name || !purchasePriceStr || !salePriceStr || !quantityStr) {
       return NextResponse.json(
-        { message: "Все поля (name, purchasePrice, salePrice, quantity) обязательны." },
+        { message: "Поля name, purchasePrice, salePrice, quantity обязательны." },
+        { status: 400 }
+      );
+    }
+
+    const purchasePrice = parseFloat(purchasePriceStr);
+    const salePrice = parseFloat(salePriceStr);
+    const quantity = parseInt(quantityStr, 10);
+
+    if (isNaN(purchasePrice) || isNaN(salePrice) || isNaN(quantity)) {
+      return NextResponse.json(
+        { message: "Поля purchasePrice, salePrice, quantity должны быть числами." },
+        { status: 400 }
+      );
+    }
+
+    let storeIds: string[] = [];
+    if (storesRaw) {
+      try {
+        storeIds = JSON.parse(storesRaw);
+        if (!Array.isArray(storeIds) || !storeIds.every((id) => typeof id === "string")) {
+          throw new Error("storeIds должен быть массивом строк");
+        }
+      } catch (e) {
+        return NextResponse.json(
+          { message: "Некорректный формат данных для магазинов (ожидается JSON массив ID)." },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (storeIds.length === 0) {
+      return NextResponse.json(
+        { message: "Выберите хотя бы один магазин." },
         { status: 400 }
       );
     }
@@ -46,19 +89,10 @@ export async function POST(req: Request) {
     if (image && image.size > 0) {
       const bytes = await image.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const fileName = `${Date.now()}-${image.name}`;
+      const fileName = `${Date.now()}-${image.name.replace(/\s+/g, "_")}`;
       const filePath = path.join(process.cwd(), "public", "uploads", fileName);
       await writeFile(filePath, buffer);
       imageUrl = `/uploads/${fileName}`;
-    }
-
-    const storeIds = formData.getAll("storeIds") as string[];
-
-    if (storeIds.length === 0) {
-      return NextResponse.json(
-        { message: "Выберите хотя бы один магазин." },
-        { status: 400 }
-      );
     }
 
     const product = await prisma.product.create({
@@ -88,9 +122,12 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ product: productWithStores });
+    return NextResponse.json({ product: productWithStores }, { status: 201 });
   } catch (error) {
     console.error("Ошибка при создании товара:", error);
-    return NextResponse.json({ message: "Ошибка сервера" }, { status: 500 });
+    if (error instanceof SyntaxError && error.message.includes("JSON")) {
+      return NextResponse.json({ message: "Ошибка в формате данных магазинов (JSON)" }, { status: 400 });
+    }
+    return NextResponse.json({ message: "Ошибка сервера при создании товара" }, { status: 500 });
   }
 }

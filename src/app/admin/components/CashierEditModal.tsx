@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import InputField from "./InputField";
 import PrimaryButton from "./PrimaryButton";
+import { motion } from "framer-motion"; // Импортируем motion
 
 interface Cashier {
   id: string;
   email: string;
+  // добавьте другие поля, если они есть
 }
 
 export default function CashierEditModal({
@@ -41,8 +43,20 @@ export default function CashierEditModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <motion.div
+        className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ duration: 0.2, delay: 0.05 }}
+      >
         <button
           className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
           onClick={onClose}
@@ -88,7 +102,7 @@ export default function CashierEditModal({
             Отмена
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

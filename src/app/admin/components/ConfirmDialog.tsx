@@ -1,5 +1,6 @@
 import React from "react";
 import { FiAlertCircle } from "react-icons/fi";
+import { motion } from "framer-motion"; // Импортируем motion
 
 export default function ConfirmDialog({
   open,
@@ -15,8 +16,20 @@ export default function ConfirmDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }} // Для AnimatePresence
+      transition={{ duration: 0.2 }}
+    >
+      <motion.div
+        className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }} // Для AnimatePresence
+        transition={{ duration: 0.2, delay: 0.05 }}
+      >
         <div className="flex items-start gap-3 mb-4">
           <FiAlertCircle className="text-red-500 w-6 h-6 mt-1" />
           <div>
@@ -38,7 +51,7 @@ export default function ConfirmDialog({
             Удалить
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

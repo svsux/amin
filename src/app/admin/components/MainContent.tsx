@@ -24,6 +24,7 @@ interface MainContentProps {
   // Props for ProductsSection
   productsProps: {
     products: Product[];
+    setProducts: React.Dispatch<React.SetStateAction<Product[]>>; // <--- ДОБАВЛЕНО ЗДЕСЬ
     loadingProducts: boolean;
     productMessage: { text: string | null; type: "success" | "error" } | null;
     isLoadingProductAction: boolean;
@@ -68,13 +69,18 @@ interface MainContentProps {
     handleEditStore: (store: Store) => void;
     handleDeleteStore: (id: string) => void;
     resetStoreForm: () => void;
-    setStoreMessage: (v: { text: string | null; type: "success" | "error" } | null) => void; // Добавлено
+    setStoreMessage: (v: { text: string | null; type: "success" | "error" } | null) => void;
   };
 }
 
-export default function MainContent({ tab, cashiersProps, productsProps, storesProps }: MainContentProps) {
+export default function MainContent({
+  tab,
+  cashiersProps,
+  productsProps,
+  storesProps,
+}: MainContentProps) {
   return (
-    <div className="px-4 py-6 sm:px-0">
+    <div className="px-4 py-6 sm:px-0 relative min-h-[80vh]">
       {tab === "cashiers" && <CashiersSection {...cashiersProps} />}
       {tab === "products" && <ProductsSection {...productsProps} />}
       {tab === "stores" && <StoresSection {...storesProps} />}
