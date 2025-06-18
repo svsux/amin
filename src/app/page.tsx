@@ -5,13 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "authenticated") {
+    // Проверяем, что пользователь находится на главной странице
+    if (status === "authenticated" && window.location.pathname === "/") {
       if (session?.user?.role === "ADMIN") {
         router.replace("/admin");
       } else if (session?.user?.role === "CASHIER") {
@@ -22,28 +24,35 @@ export default function Home() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950 text-white text-xl">
+      <div className="min-h-screen flex items-center justify-center bg-[#0F1115] text-white text-xl">
         Загрузка...
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1F2937] via-[#3B82F6] to-[#10B981]">
+    <div className="min-h-screen flex items-center justify-center bg-[#0F1115] px-4">
       <motion.div
-        className="relative bg-white/10 backdrop-blur-xl shadow-2xl rounded-3xl p-10 max-w-md w-full text-center border border-white/20"
+        className="relative bg-[#181B20]/80 backdrop-blur-xl shadow-2xl rounded-3xl p-10 max-w-md w-full text-center border border-[#23262B]"
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
-        <motion.h1
-          className="text-4xl font-bold text-white mb-6 drop-shadow"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.6 }}
+        <motion.div
+          className="mb-8 flex justify-center"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
         >
-          SmartPoint
-        </motion.h1>
+          <Image
+            src="/login/SmartLogo.png"
+            alt="Smart Logo"
+            width={150}
+            height={150}
+            priority
+            className="drop-shadow-md"
+          />
+        </motion.div>
 
         <motion.p
           className="text-white/80 mb-8"
@@ -51,8 +60,7 @@ export default function Home() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.6 }}
         >
-          Добро пожаловать в платформу. Пожалуйста, авторизуйтесь, чтобы
-          продолжить.
+          Добро пожаловать! Пожалуйста, авторизуйтесь, чтобы продолжить.
         </motion.p>
 
         <motion.div
@@ -78,7 +86,7 @@ export default function Home() {
           ) : (
             <Link
               href="/login"
-              className="block w-full py-3 bg-blue-600 hover:bg-blue-700 transition rounded-xl text-white font-semibold shadow-lg"
+              className="block w-full py-3 bg-indigo-600 hover:bg-indigo-700 transition rounded-xl text-white font-semibold shadow-lg"
             >
               Войти
             </Link>

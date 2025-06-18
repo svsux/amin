@@ -1,12 +1,11 @@
 import Alert from "../components/Alert";
 import InputField from "../components/InputField";
 import PrimaryButton from "../components/PrimaryButton";
-import DangerButton from "../components/DangerButton";
 import AnimatedSelect from "../components/AnimatedSelect";
 import { FiEdit, FiPlus, FiArchive, FiTrash, FiSearch, FiUsers, FiPackage } from "react-icons/fi";
-import React, { useState } from "react"; // Добавлен useState
+import React, { useState } from "react";
 import type { Store, Cashier } from "../types";
-import ConfirmDialog from "../components/ConfirmDialog"; // ИМПОРТИРУЕМ ВАШ КОМПОНЕНТ
+import ConfirmDialog from "../components/ConfirmDialog";
 
 type CashierOption = { label: string; value: string };
 
@@ -17,7 +16,7 @@ interface Props {
   stores: Store[];
   cashiers: Cashier[];
   loadingStores: boolean;
-  storeMessage: { text: string | null; type: "success" | "error" } | null;
+  storeMessage: { text: string | null; type: "success" | "error" | "info" } | null;
   isLoadingStoreAction: boolean;
   editStore: Store | null;
   searchTermStores: string;
@@ -27,9 +26,9 @@ interface Props {
   setSearchTermStores: (v: string) => void;
   handleStoreSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   handleEditStore: (store: Store) => void;
-  handleDeleteStore: (id: string) => void; // Эта функция будет вызвана при подтверждении
+  handleDeleteStore: (id: string) => void;
   resetStoreForm: () => void;
-  setStoreMessage: (v: any) => void;
+  setStoreMessage: (v: { text: string | null; type: "success" | "error" | "info" } | null) => void;
 }
 
 const StoresSection: React.FC<Props> = ({
@@ -49,7 +48,7 @@ const StoresSection: React.FC<Props> = ({
   setSearchTermStores,
   handleStoreSubmit,
   handleEditStore,
-  handleDeleteStore, // Используем эту функцию
+  handleDeleteStore,
   resetStoreForm,
   setStoreMessage,
 }) => {
@@ -62,40 +61,6 @@ const StoresSection: React.FC<Props> = ({
     setSelectedCashiers(selectedOptions ? selectedOptions.map((o) => o.value) : []);
   };
 
-  const customSelectStyles = {
-    option: (provided: any, state: any) => ({
-      ...provided,
-      backgroundColor: state.isSelected ? "#6366f1" : state.isFocused ? "#e0e7ff" : "#ffffff",
-      color: state.isSelected ? "#ffffff" : "#374151",
-      fontWeight: state.isSelected ? 500 : 400,
-    }),
-    multiValue: (provided: any) => ({
-      ...provided,
-      backgroundColor: "#e0e7ff",
-      color: "#4338ca",
-    }),
-    multiValueLabel: (provided: any) => ({
-      ...provided,
-      color: "#4338ca",
-    }),
-    multiValueRemove: (provided: any, state: any) => ({
-      ...provided,
-      color: state.isFocused ? "#4338ca" : "#6366f1",
-      backgroundColor: "transparent",
-      ":hover": {
-        color: "#4338ca",
-      },
-    }),
-    control: (provided: any) => ({
-      ...provided,
-      borderColor: "#d1d5db",
-      ":hover": {
-        borderColor: "#6366f1",
-      },
-    }),
-  };
-
-  // Состояния для диалога подтверждения
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
 
@@ -111,23 +76,29 @@ const StoresSection: React.FC<Props> = ({
 
   const handleConfirmDelete = () => {
     if (storeToDelete) {
-      handleDeleteStore(storeToDelete.id); // Вызываем переданную функцию handleDeleteStore
+      handleDeleteStore(storeToDelete.id);
     }
     closeConfirmDialog();
   };
 
+  const filteredStores = stores.filter(
+    (store) =>
+      store.name.toLowerCase().includes(searchTermStores.toLowerCase()) ||
+      store.address?.toLowerCase().includes(searchTermStores.toLowerCase())
+  );
 
   return (
     <section className="space-y-10">
-      <div className="bg-white/80 backdrop-blur-md border border-gray-200 shadow-xl rounded-2xl p-8 transition-all">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+      {/* Форма создания/редактирования магазина */}
+      <div className="bg-[#121418]/80 backdrop-blur-md border border-[#1E2228] shadow-xl rounded-2xl p-8 transition-all">
+        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
           {editStore ? (
             <>
-              <FiEdit className="text-indigo-600" /> Редактировать магазин: {editStore.name}
+              <FiEdit className="text-[#0066FF]" /> Редактировать: {editStore.name}
             </>
           ) : (
             <>
-              <FiPlus className="text-indigo-600" /> Создать новый магазин
+              <FiPlus className="text-[#0066FF]" /> Создать новый магазин
             </>
           )}
         </h2>
@@ -151,11 +122,11 @@ const StoresSection: React.FC<Props> = ({
             placeholder="ул. Ленина, д. 10"
           />
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[#A0A8B8] mb-1">
               Кассиры в магазине
             </label>
             {cashiers.length === 0 ? (
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-[#A0A8B8]/70 mt-1">
                 Сначала добавьте кассиров в разделе &quot;Кассиры&quot;.
               </p>
             ) : (
@@ -166,10 +137,8 @@ const StoresSection: React.FC<Props> = ({
                   selectedCashiers.includes(option.value)
                 )}
                 onChange={handleCashierChange}
-                className="react-select-container"
                 classNamePrefix="react-select"
                 placeholder="Выберите кассиров..."
-                styles={customSelectStyles}
               />
             )}
           </div>
@@ -194,7 +163,7 @@ const StoresSection: React.FC<Props> = ({
                   resetStoreForm();
                   setStoreMessage(null);
                 }}
-                className="flex-1 py-2.5 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                className="flex-1 py-2.5 px-4 border border-[#1E2228] rounded-md shadow-sm text-sm font-semibold text-[#A0A8B8] bg-[#121418] hover:bg-[#1E2228] transition-colors"
               >
                 Отмена
               </button>
@@ -203,9 +172,10 @@ const StoresSection: React.FC<Props> = ({
         </form>
       </div>
 
-      <div className="bg-white/80 backdrop-blur-md border border-gray-200 shadow-xl rounded-2xl p-8 transition-all">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <FiArchive className="text-indigo-600" /> Список магазинов
+      {/* Список магазинов */}
+      <div className="bg-[#121418]/80 backdrop-blur-md border border-[#1E2228] shadow-xl rounded-2xl p-8 transition-all">
+        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+          <FiArchive className="text-[#0066FF]" /> Список магазинов
         </h2>
         <div className="mb-6 relative">
           <InputField
@@ -219,65 +189,57 @@ const StoresSection: React.FC<Props> = ({
           />
         </div>
         {loadingStores ? (
-          <p className="text-gray-600 text-center py-4">Загрузка магазинов...</p>
-        ) : stores.length === 0 ? (
-          <p className="text-gray-600 text-center py-4">
-            Магазины не найдены или еще не созданы.
+          <p className="text-[#A0A8B8] text-center py-4">Загрузка магазинов...</p>
+        ) : filteredStores.length === 0 ? (
+          <p className="text-[#A0A8B8] text-center py-4">
+            Магазины не найдены.
           </p>
         ) : (
-          <div className="max-h-[60vh] overflow-y-auto pr-2">
-            <ul className="divide-y divide-gray-200">
-              {stores.map((store) => (
-                <li key={store.id} className="p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
-                    <div className="flex-grow">
-                      <h3 className="font-semibold text-lg text-gray-900">{store.name}</h3>
-                      <p className="text-sm text-gray-600">
-                        {store.address || "Адрес не указан"}
-                      </p>
-                      <div className="mt-2 text-xs space-y-1">
-                        <p className="text-gray-700 flex items-center gap-1">
-                          <FiUsers className="text-indigo-600 w-3.5 h-3.5" />
-                          <span className="font-medium">
-                            Кассиры ({store.cashiers.length}):
-                          </span>{" "}
-                          {store.cashiers.length > 0 ? store.cashiers.map((c) => c.cashier.email).join(", ") : "Нет"}
-                        </p>
-                        <p className="text-gray-700 flex items-center gap-1">
-                           <FiPackage className="text-indigo-600 w-3.5 h-3.5" />
-                          <span className="font-medium">
-                            Товары ({store.products.length}):
-                          </span>{" "}
-                          {store.products.length > 0 ? store.products.map((p) => p.product.name).join(", ") : "Нет"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 mt-4 sm:mt-0 flex-shrink-0">
-                      <button
-                        onClick={() => handleEditStore(store)}
-                        disabled={isLoadingStoreAction}
-                        className="text-indigo-600 hover:text-indigo-800 font-semibold transition flex items-center gap-1 disabled:text-gray-400 disabled:hover:text-gray-400"
-                      >
-                        <FiEdit className="w-4 h-4 mr-1" />
-                        Редактировать
-                      </button>
-                      <DangerButton
-                        onClick={() => openConfirmDialog(store)} // ИЗМЕНЕНО: открываем диалог
-                        disabled={isLoadingStoreAction}
-                      >
-                        <FiTrash className="mr-1 text-white" />
-                        Удалить
-                      </DangerButton>
-                    </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredStores.map((store) => (
+              <div key={store.id} className="bg-[#0F1115] rounded-2xl border border-[#1E2228] p-6 flex flex-col justify-between transition-all duration-300 hover:border-[#0066FF]/60 hover:shadow-lg hover:shadow-[#0066FF]/10">
+                <div>
+                  <h3 className="font-bold text-xl text-white truncate">{store.name}</h3>
+                  <p className="text-sm text-[#A0A8B8] mt-1 truncate">
+                    {store.address || "Адрес не указан"}
+                  </p>
+                </div>
+                <div className="my-6 space-y-3">
+                  <div className="flex items-center gap-3 text-sm">
+                    <FiUsers className="w-5 h-5 text-[#0066FF]" />
+                    <span className="text-[#A0A8B8]">Кассиров:</span>
+                    <span className="font-semibold text-white">{store.cashiers.length}</span>
                   </div>
-                </li>
-              ))}
-            </ul>
+                  <div className="flex items-center gap-3 text-sm">
+                    <FiPackage className="w-5 h-5 text-[#0066FF]" />
+                    <span className="text-[#A0A8B8]">Товаров:</span>
+                    <span className="font-semibold text-white">{store.products.length}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 pt-4 border-t border-[#1E2228]">
+                  <button
+                    onClick={() => handleEditStore(store)}
+                    disabled={isLoadingStoreAction}
+                    className="flex-1 inline-flex justify-center items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0066FF]/10 border border-transparent rounded-md hover:bg-[#0066FF]/20 transition-colors disabled:opacity-50"
+                  >
+                    <FiEdit />
+                    Редактировать
+                  </button>
+                  <button
+                    onClick={() => openConfirmDialog(store)}
+                    disabled={isLoadingStoreAction}
+                    className="p-2 text-[#FF3B30] hover:bg-[#FF3B30]/20 rounded-md transition-colors disabled:opacity-50"
+                    title="Удалить магазин"
+                  >
+                    <FiTrash />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Диалог подтверждения */}
       <ConfirmDialog
         open={isConfirmDialogOpen}
         message={`Вы уверены, что хотите удалить магазин "${storeToDelete?.name || ''}"? Это действие необратимо и удалит все связанные с ним данные.`}

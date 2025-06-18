@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 
-// Интерфейс для данных, ожидающий и имя, и email
 interface StoreInfo {
   store: {
     id: string;
@@ -41,28 +40,29 @@ const StoreHeader: React.FC = () => {
   }, []);
 
   if (loading) {
-    return <div className="text-gray-500">Загрузка информации о магазине...</div>;
+    return <div className="text-gray-400">Загрузка информации о магазине...</div>;
   }
 
   if (error) {
-    return <div className="text-red-500">Ошибка: {error}</div>;
+    return <div className="text-red-400">Ошибка: {error}</div>;
   }
 
   if (!data) {
-    return <div className="text-gray-500">Данные не найдены.</div>;
+    return <div className="text-gray-400">Данные не найдены.</div>;
   }
 
   return (
-    <header className="bg-indigo-600 text-white p-4 rounded-lg shadow-md flex items-center h-full">
-      <div className="flex justify-between items-center w-full">
+    <header className="bg-indigo-700 rounded-2xl px-6 py-3 flex items-start w-full">
+      <div className="flex justify-between items-start w-full gap-4">
         <div>
-          <h1 className="text-xl font-bold">{data.store.name}</h1>
-          <p className="text-sm">{data.store.address}</p>
+          <h1 className="text-lg font-bold text-white">{data.store.name}</h1>
+          <p className="text-sm text-indigo-100">{data.store.address}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm font-semibold">Кассир:</p>
-          {/* Отображаем имя, если его нет - email */}
-          <p>{data.cashier.name || data.cashier.email || "Кассир не определен"}</p>
+          <p className="text-sm font-semibold text-indigo-100">Кассир:</p>
+          <p className="text-sm text-white font-medium">
+            {data.cashier.name || data.cashier.email || "Кассир не определен"}
+          </p>
         </div>
       </div>
     </header>

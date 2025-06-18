@@ -135,6 +135,19 @@ export async function DELETE(
       return NextResponse.json({ message: "Товар не найден" }, { status: 404 });
     }
 
+    // --- ДОБАВЛЕНО: Проверка на связанные транзакции ---
+    const relatedCount = await prisma.transactionItem.count({
+      where: { productId },
+    });
+
+    if (relatedCount > 0) {
+      return NextResponse.json(
+        { message: "Нельзя удалить товар, пока есть связанные продажи/чеки." },
+        { status: 409 }
+      );
+    }
+    // --- КОНЕЦ ДОБАВЛЕНИЯ ---
+
     // Сначала удаляем связанные записи в StoreProduct
     await prisma.storeProduct.deleteMany({
       where: { productId: productId },
@@ -160,13 +173,13 @@ export async function DELETE(
     return NextResponse.json({ message: "Товар успешно удален" }, { status: 200 });
   } catch (error: any) {
     console.error("Ошибка при удалении товара:", error);
-    if (error instanceof PrismaClientKnownRequestError) { // ИСПРАВЛЕНО
-        if (error.code === 'P2003') { // Foreign key constraint failed
-             return NextResponse.json({ message: "Невозможно удалить товар, так как он связан с другими записями (например, в заказах)." }, { status: 409 }); // 409 Conflict
-        }
-        if (error.code === 'P2025') { // Record to delete not found
-            return NextResponse.json({ message: "Товар для удаления не найден." }, { status: 404 });
-        }
+    if (error instanceof PrismaClientKnownRequestError) {
+      if (error.code === 'P2003') {
+        return NextResponse.json({ message: "Невозможно удалить товар, так как он связан с другими записями (например, в заказах)." }, { status: 409 });
+      }
+      if (error.code === 'P2025') {
+        return NextResponse.json({ message: "Товар для удаления не найден." }, { status: 404 });
+      }
     }
     return NextResponse.json({ message: "Ошибка сервера при удалении товара", details: error.message }, { status: 500 });
   }

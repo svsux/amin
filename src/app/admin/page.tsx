@@ -3,7 +3,6 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, FormEvent } from "react";
-// Добавляем иконку для отчетов, если понадобится в TabNavigation
 import { FiHome, FiUsers, FiPackage, FiArchive, FiAlertCircle, FiBarChart2 } from "react-icons/fi";
 import Header from "./components/Header";
 import TabNavigation from "./components/TabNavigation";
@@ -12,17 +11,14 @@ import MainContent from "./components/MainContent";
 import CashierEditModal from "./components/CashierEditModal";
 import ConfirmDialog from "./components/ConfirmDialog";
 import ProductEditModal from "./components/ProductEditModal";
-import ReportsSection from "./components/ReportsSection"; // Импортируем компонент отчетов
+import ReportsSection from "./components/ReportsSection";
 import { AnimatePresence } from "framer-motion";
-
-// Типы
 import type { Cashier, Product, Store } from "./types";
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  // Добавляем 'reports' в возможные значения для вкладок
   const [tab, setTab] = useState<"cashiers" | "products" | "stores" | "reports">("cashiers");
 
   // --- Состояния для кассиров ---
@@ -30,13 +26,24 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [cashiers, setCashiers] = useState<Cashier[]>([]);
   const [loadingCashiers, setLoadingCashiers] = useState(false);
-  const [cashierMessage, setCashierMessage] = useState<{ text: string | null; type: "success" | "error" } | null>(null);
+  const [cashierMessage, setCashierMessage] = useState<{ text: string | null; type: "success" | "error" | "info" } | null>(null);
   const [isLoadingCashierAction, setIsLoadingCashierAction] = useState(false);
   const [searchTermCashiers, setSearchTermCashiers] = useState("");
   const [editingCashier, setEditingCashier] = useState<Cashier | null>(null);
   const [isCashierEditModalOpen, setIsCashierEditModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [cashierToDelete, setCashierToDelete] = useState<Cashier | null>(null);
+
+  // --- Функции для кассиров ---
+  const handleDeleteCashier = (cashier: Cashier) => {
+    setCashierToDelete(cashier);
+    setDeleteConfirmOpen(true);
+  };
+
+  const openEditCashierModal = (cashier: Cashier) => {
+    setEditingCashier(cashier);
+    setIsCashierEditModalOpen(true);
+  };
 
   // --- Состояния для товаров ---
   const [products, setProducts] = useState<Product[]>([]);
@@ -46,27 +53,49 @@ export default function AdminPage() {
   const [productSalePrice, setProductSalePrice] = useState("");
   const [productImage, setProductImage] = useState<File | null>(null);
   const [productQuantity, setProductQuantity] = useState("");
-  const [productMessage, setProductMessage] = useState<{ text: string | null; type: "success" | "error" } | null>(null);
+  const [productMessage, setProductMessage] = useState<{ text: string | null; type: "success" | "error" | "info" } | null>(null);
   const [isLoadingProductAction, setIsLoadingProductAction] = useState(false);
   const [searchTermProducts, setSearchTermProducts] = useState("");
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [isProductEditModalOpen, setIsProductEditModalOpen] = useState(false); // Для ProductEditModal
+  const [isProductEditModalOpen, setIsProductEditModalOpen] = useState(false);
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
   const [productDeleteConfirmOpen, setProductDeleteConfirmOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-
 
   // --- Состояния для магазинов ---
   const [stores, setStores] = useState<Store[]>([]);
   const [loadingStores, setLoadingStores] = useState(false);
   const [storeName, setStoreName] = useState("");
   const [storeAddress, setStoreAddress] = useState("");
-  const [storeMessage, setStoreMessage] = useState<{ text: string | null; type: "success" | "error" } | null>(null);
+  const [storeMessage, setStoreMessage] = useState<{ text: string | null; type: "success" | "error" | "info" } | null>(null);
   const [isLoadingStoreAction, setIsLoadingStoreAction] = useState(false);
   const [editStore, setEditStore] = useState<Store | null>(null);
   const [searchTermStores, setSearchTermStores] = useState("");
   const [selectedCashiersForStore, setSelectedCashiersForStore] = useState<string[]>([]);
+  const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
+  const [storeDeleteConfirmOpen, setStoreDeleteConfirmOpen] = useState(false);
 
+  // --- ЭФФЕКТЫ ДЛЯ АВТОМАТИЧЕСКОГО СКРЫТИЯ УВЕДОМЛЕНИЙ ---
+  useEffect(() => {
+    if (storeMessage?.text) {
+      const timer = setTimeout(() => setStoreMessage({ text: null, type: "info" }), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [storeMessage]);
+
+  useEffect(() => {
+    if (cashierMessage?.text) {
+      const timer = setTimeout(() => setCashierMessage({ text: null, type: "info" }), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [cashierMessage]);
+
+  useEffect(() => {
+    if (productMessage?.text) {
+      const timer = setTimeout(() => setProductMessage({ text: null, type: "info" }), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [productMessage]);
 
   // --- Загрузка данных ---
   useEffect(() => {
@@ -83,16 +112,24 @@ export default function AdminPage() {
             fetch("/api/admin/stores"),
           ]);
 
+          // ИСПРАВЛЕНО: Явная проверка, что данные являются массивом
           const cashiersData = await cashiersRes.json();
-          setCashiers(cashiersData.cashiers || []);
+          setCashiers(Array.isArray(cashiersData) ? cashiersData : []);
 
+          // ИСПРАВЛЕНО: Явная проверка, что данные являются массивом
           const productsData = await productsRes.json();
-          setProducts(productsData.products || []);
+          setProducts(Array.isArray(productsData) ? productsData : []);
 
+          // ИСПРАВЛЕНО: Явная проверка, что данные являются массивом
           const storesData = await storesRes.json();
-          setStores(storesData.stores || []);
+          setStores(Array.isArray(storesData) ? storesData : []);
+
         } catch (error) {
           console.error("Ошибка при загрузке данных:", error);
+          // В случае ошибки устанавливаем пустые массивы, чтобы избежать падения
+          setCashiers([]);
+          setProducts([]);
+          setStores([]);
           setCashierMessage({ text: "Ошибка загрузки кассиров.", type: "error" });
           setProductMessage({ text: "Ошибка загрузки товаров.", type: "error" });
           setStoreMessage({ text: "Ошибка загрузки магазинов.", type: "error" });
@@ -127,16 +164,10 @@ export default function AdminPage() {
 
   if (session?.user?.role !== "ADMIN") {
     return (
-      <div className="flex flex-col justify-center items-center min-h-screen text-center p-8">
-        <FiAlertCircle className="text-red-500 w-16 h-16 mb-4" />
-        <h1 className="text-3xl font-bold text-red-600 mb-4">Доступ запрещен</h1>
-        <p className="text-gray-700 mb-6">У вас нет прав для доступа к этой странице.</p>
-        <button
-          onClick={() => router.push("/")}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors flex items-center gap-2"
-        >
-          <FiHome /> Вернуться на главную
-        </button>
+      <div className="flex flex-col justify-center items-center min-h-screen text-center p-8 bg-[#0F1115]">
+        <FiAlertCircle className="text-[#FF3B30] w-16 h-16 mb-4" />
+        <h2 className="text-2xl font-bold text-white">Доступ запрещен</h2>
+        <p className="text-[#A0A8B8] mt-2">У вас нет прав для просмотра этой страницы.</p>
       </div>
     );
   }
@@ -157,7 +188,6 @@ export default function AdminPage() {
         setCashierMessage({ text: `Кассир ${data.user.email} успешно создан!`, type: "success" });
         setEmail("");
         setPassword("");
-        setCashierMessage(null); // Добавлено
         setCashiers((prev) => [data.user as Cashier, ...prev]);
       } else {
         setCashierMessage({ text: data.message || "Ошибка при создании кассира.", type: "error" });
@@ -170,56 +200,27 @@ export default function AdminPage() {
     }
   };
 
-  // Эта функция будет вызываться при подтверждении удаления кассира в диалоге
   const executeDeleteCashier = async (id: string) => {
     setIsLoadingCashierAction(true);
     setCashierMessage(null);
 
     try {
-      // Удалено: console.log("Client: ID кассира для удаления:", id);
       const response = await fetch(`/api/admin/cashiers/${id}`, { method: "DELETE" });
 
       if (!response.ok) {
         let errorData: { message?: string } = {};
-        let responseBodyText = ""; 
-
         try {
-          responseBodyText = await response.text(); 
-          // Удалено: console.log(`Client: Получено сырое тело ответа для статуса ${response.status}: "${responseBodyText}"`);
-
-          if (responseBodyText && responseBodyText.trim() !== "") {
-            errorData = JSON.parse(responseBodyText);
-          } else {
-            // Удалено: console.warn(`Client: Тело ответа было пустым для статуса ${response.status}.`);
-            errorData = { message: `Ошибка ${response.status}: Сервер вернул пустой ответ.` };
-          }
+          errorData = await response.json();
         } catch (e) {
-          // Удалено: console.error(`Client: Не удалось обработать тело ответа. Статус: ${response.status}. Сырой текст: "${responseBodyText}". Ошибка:`, e);
-          errorData = { message: `Ошибка ${response.status}: Не удалось обработать ответ от сервера. (${(e as Error).message || 'неизвестная ошибка парсинга'})` };
+          errorData = { message: `Ошибка ${response.status}: Не удалось обработать ответ от сервера.` };
         }
-
-        if (response.status === 409) {
-          // Удалено: console.info("Client: Обработан конфликт при удалении кассира (409). Данные из ответа:", errorData);
-          setCashierMessage({
-            text: errorData?.message || "Невозможно удалить кассира, так как он связан с магазинами.",
-            type: "error",
-          });
-          return; 
-        } else {
-          // Удалено: console.error(`Client: Ошибка при удалении кассира (статус ${response.status}). Данные из ответа:`, errorData);
-          setCashierMessage({
-            text: errorData?.message || `Ошибка при удалении кассира (статус ${response.status}).`,
-            type: "error",
-          });
-          return; 
-        }
+        throw new Error(errorData.message || `Ошибка при удалении кассира (статус ${response.status}).`);
       }
 
       setCashiers((prev) => prev.filter((cashier) => cashier.id !== id));
       setCashierMessage({ text: "Кассир успешно удален.", type: "success" });
-    } catch (err) { 
+    } catch (err) {
       const error = err as Error;
-      // Удалено: console.error("Client: Непредвиденная ошибка в процессе удаления кассира:", error);
       setCashierMessage({
         text: error.message || "Произошла непредвиденная ошибка при удалении кассира.",
         type: "error",
@@ -230,7 +231,6 @@ export default function AdminPage() {
       setCashierToDelete(null);
     }
   };
-
 
   const resetProductForm = () => {
     setProductName("");
@@ -319,7 +319,12 @@ export default function AdminPage() {
           const textError = await res.text();
           errorMessage = textError || errorMessage;
         }
-        throw new Error(errorMessage);
+        // Вместо throw:
+        setProductMessage({ text: errorMessage, type: 'error' });
+        setIsLoadingProductAction(false);
+        setProductDeleteConfirmOpen(false);
+        setProductToDelete(null);
+        return; // Завершаем выполнение функции
       }
 
       setProducts((prevProducts) => prevProducts.filter((p) => p.id !== productToDelete.id));
@@ -390,24 +395,36 @@ export default function AdminPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDeleteStore = async (id: string) => {
-    // УДАЛИТЕ ИЛИ ЗАКОММЕНТИРУЙТЕ ЭТУ СТРОКУ:
-    // if (!confirm("Вы уверены, что хотите удалить этот магазин? Это действие необратимо.")) return; 
-    setIsLoadingStoreAction(true);
-    setStoreMessage(null);
-    try {
-      await fetch(`/api/admin/stores/${id}`, { method: "DELETE" });
-      setStores((prev) => prev.filter((s) => s.id !== id));
-      setStoreMessage({ text: "Магазин успешно удален.", type: "success" });
-    } catch (err) {
-      console.error("Delete store error:", err);
-      setStoreMessage({ text: "Ошибка при удалении магазина.", type: "error" });
-    } finally {
-      setIsLoadingStoreAction(false);
+  const handleDeleteStore = (storeId: string) => {
+    const store = stores.find(s => s.id === storeId);
+    if (store) {
+      setStoreToDelete(store);
+      setStoreDeleteConfirmOpen(true);
     }
   };
 
-  // Добавьте функцию handleSaveCashierEdit
+  const executeDeleteStore = async () => {
+    if (!storeToDelete) return;
+    setIsLoadingStoreAction(true);
+    setStoreMessage(null);
+    try {
+      const res = await fetch(`/api/admin/stores/${storeToDelete.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `Ошибка при удалении магазина.`);
+      }
+      setStores((prev) => prev.filter((s) => s.id !== storeToDelete.id));
+      setStoreMessage({ text: "Магазин успешно удален.", type: "success" });
+    } catch (err) {
+      console.error("Delete store error:", err);
+      setStoreMessage({ text: (err as Error).message || "Ошибка при удалении магазина.", type: "error" });
+    } finally {
+      setIsLoadingStoreAction(false);
+      setStoreDeleteConfirmOpen(false);
+      setStoreToDelete(null);
+    }
+  };
+
   const handleSaveCashierEdit = async (updatedCashier: { email: string; password?: string }) => {
     if (!editingCashier) return;
 
@@ -487,7 +504,7 @@ export default function AdminPage() {
 
   // --- Tab Navigation ---
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[#0F1115]">
       <Header userEmail={session?.user?.email || null} />
       {/* Вам нужно будет добавить новую вкладку "Отчеты" в сам компонент TabNavigation */}
       <TabNavigation currentTab={tab} onTabChange={setTab} />
@@ -609,7 +626,7 @@ export default function AdminPage() {
 
         {productDeleteConfirmOpen && productToDelete && (
           <ConfirmDialog
-            key="product-delete-confirm" // Ключ важен для AnimatePresence
+            key="product-delete-confirm"
             open={productDeleteConfirmOpen}
             message={`Вы уверены, что хотите удалить товар "${productToDelete?.name || 'неизвестный товар'}"? Это действие необратимо.`}
             onCancel={() => {
@@ -617,6 +634,19 @@ export default function AdminPage() {
               setProductToDelete(null);
             }}
             onConfirm={executeDeleteProduct}
+          />
+        )}
+
+        {storeDeleteConfirmOpen && storeToDelete && (
+          <ConfirmDialog
+            key="store-delete-confirm"
+            open={storeDeleteConfirmOpen}
+            message={`Вы уверены, что хотите удалить магазин "${storeToDelete?.name}"? Все связанные с ним смены и транзакции также будут удалены.`}
+            onCancel={() => {
+              setStoreDeleteConfirmOpen(false);
+              setStoreToDelete(null);
+            }}
+            onConfirm={executeDeleteStore}
           />
         )}
 

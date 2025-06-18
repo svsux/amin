@@ -1,39 +1,54 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import AdminShiftReportModal, { AdminReportData } from './AdminShiftReportModal';
-import ConfirmDialog from './ConfirmDialog'; // Предполагается, что у вас есть этот компонент
+import ConfirmDialog from './ConfirmDialog';
+import { FiBarChart2, FiTrash, FiSearch, FiRefreshCw } from 'react-icons/fi';
+import Alert from './Alert';
+
+// Динамическая загрузка компонентов графиков
+const KpiCards = dynamic(() => import('./charts/KpiCards').then(mod => mod.KpiCards), { ssr: false });
+const SalesChart = dynamic(() => import('./charts/SalesChart').then(mod => mod.SalesChart), { ssr: false });
+const TopProductsChart = dynamic(() => import('./charts/TopProductsChart').then(mod => mod.TopProductsChart), { ssr: false });
 
 const ReportsSection = () => {
   const [reports, setReports] = useState<AdminReportData[]>([]);
+  const [statsData, setStatsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Состояния для модальных окон
   const [selectedReport, setSelectedReport] = useState<AdminReportData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // Состояния для удаления
   const [reportToDelete, setReportToDelete] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-  // Состояния для фильтрации по дате
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7);
+    return date.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
-  const fetchReports = async (start?: string, end?: string) => {
+  const fetchData = async (start: string, end: string) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      let url = '/api/admin/reports';
-      if (start && end) {
-        url += `?startDate=${start}&endDate=${end}`;
+      const [statsRes, reportsRes] = await Promise.all([
+        fetch(`/api/admin/statistics?startDate=${start}&endDate=${end}`),
+        fetch(`/api/admin/reports?startDate=${start}&endDate=${end}`)
+      ]);
+
+      if (!statsRes.ok || !reportsRes.ok) {
+        throw new Error('Ошибка при загрузке данных.');
       }
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error('Не удалось загрузить отчеты.');
-      }
-      const data = await response.json();
-      setReports(data);
+
+      const statsData = await statsRes.json();
+      const reportsData = await reportsRes.json();
+
+      setStatsData(statsData);
+      setReports(reportsData);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -42,21 +57,24 @@ const ReportsSection = () => {
   };
 
   useEffect(() => {
-    fetchReports();
+    fetchData(startDate, endDate);
   }, []);
 
   const handleSearch = () => {
     if (startDate && endDate) {
-      fetchReports(startDate, endDate);
+      fetchData(startDate, endDate);
     } else {
-      alert('Пожалуйста, выберите начальную и конечную даты.');
+      setError('Пожалуйста, выберите начальную и конечную даты.');
     }
   };
 
   const handleReset = () => {
-    setStartDate('');
-    setEndDate('');
-    fetchReports();
+    const today = new Date().toISOString().split('T')[0];
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    setStartDate(weekAgo);
+    setEndDate(today);
+    setError(null);
+    fetchData(weekAgo, today);
   };
 
   const handleViewReport = (report: AdminReportData) => {
@@ -72,13 +90,13 @@ const ReportsSection = () => {
   const confirmDelete = async () => {
     if (!reportToDelete) return;
     try {
+      setError(null);
       const response = await fetch(`/api/admin/reports/${reportToDelete}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
         throw new Error('Не удалось удалить отчет.');
       }
-      // Обновляем список отчетов на клиенте
       setReports(reports.filter(report => report.id !== reportToDelete));
     } catch (err) {
       setError((err as Error).message);
@@ -89,72 +107,90 @@ const ReportsSection = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md mt-8">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">Отчеты по сменам</h2>
-      
-      {/* Фильтр по дате */}
-      <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-gray-50 rounded-md border">
+    <div className="space-y-10">
+      {/* Фильтры */}
+      <div className="flex flex-wrap items-center gap-4 p-4 bg-[#121418] rounded-lg border border-[#1E2228]">
         <input
           type="date"
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
-          className="border-gray-300 rounded-md shadow-sm text-gray-700"
+          className="bg-[#0F1115] border border-[#1E2228] rounded-md shadow-sm text-white placeholder:text-[#A0A8B8]/50 focus:outline-none focus:ring-2 focus:ring-[#0066FF] px-3 py-2"
         />
-        <span className="text-gray-500">-</span>
+        <span className="text-[#A0A8B8]">-</span>
         <input
           type="date"
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
-          className="border-gray-300 rounded-md shadow-sm text-gray-700"
+          className="bg-[#0F1115] border border-[#1E2228] rounded-md shadow-sm text-white placeholder:text-[#A0A8B8]/50 focus:outline-none focus:ring-2 focus:ring-[#0066FF] px-3 py-2"
         />
-        <button onClick={handleSearch} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
-          Найти
+        <button onClick={handleSearch} className="flex items-center gap-2 px-4 py-2 bg-[#0066FF] text-white rounded-md hover:bg-blue-500 transition-colors">
+          <FiSearch /> Применить
         </button>
-        <button onClick={handleReset} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
-          Сбросить
+        <button onClick={handleReset} className="flex items-center gap-2 px-4 py-2 bg-[#1E2228] text-[#A0A8B8] rounded-md hover:bg-[#1E2228]/70 transition-colors">
+          <FiRefreshCw /> Сбросить (7 дней)
         </button>
       </div>
 
-      {loading && <p>Загрузка отчетов...</p>}
-      {error && <p className="text-red-500">Ошибка: {error}</p>}
-      {!loading && !error && (
-        <div className="space-y-3">
-          {reports.length > 0 ? (
-            reports.map(report => (
-              <div key={report.id} className="border p-4 rounded-md flex justify-between items-center bg-gray-50 hover:bg-gray-100">
-                <div>
-                  <p className="font-semibold text-gray-900">Кассир: {report.cashierName}</p>
-                  <p className="text-sm text-gray-600">
-                    Закрыта: {new Date(report.closedAt).toLocaleString()}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="font-bold text-lg text-green-700">{report.totalSales.toFixed(2)}₽</p>
-                    <button
-                      onClick={() => handleViewReport(report)}
-                      className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
-                    >
-                      Подробнее
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteClick(report.id)}
-                    className="p-2 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full"
-                    title="Удалить отчет"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500">Отчетов по заданным критериям не найдено.</p>
-          )}
+      {error && <Alert message={error} type="error" />}
+
+      {/* Дашборд */}
+      {loading ? (
+        <p className="text-center text-[#A0A8B8] py-6">Загрузка аналитики...</p>
+      ) : statsData && (
+        <div className="space-y-6">
+          <KpiCards data={statsData.kpi} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SalesChart data={statsData.dailySales} />
+            <TopProductsChart data={statsData.topProducts} />
+          </div>
         </div>
       )}
+
+      {/* Список смен */}
+      <div className="bg-[#121418]/80 backdrop-blur-md border border-[#1E2228] shadow-xl rounded-2xl p-8 transition-all">
+        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+          <FiBarChart2 className="text-[#0066FF]" />
+          Детализация по сменам
+        </h2>
+        {loading ? (
+          <p className="text-center text-[#A0A8B8] py-6">Загрузка смен...</p>
+        ) : (
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+            {reports.length > 0 ? (
+              reports.map(report => (
+                <div key={report.id} className="border border-[#1E2228] p-4 rounded-lg flex justify-between items-center bg-[#121418] hover:bg-[#1E2228]/60 transition-colors">
+                  <div>
+                    <p className="font-semibold text-white">Кассир: {report.cashierName}</p>
+                    <p className="text-sm text-[#A0A8B8]">
+                      Закрыта: {new Date(report.closedAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="font-bold text-lg text-green-400">{report.totalSales.toFixed(2)}₽</p>
+                      <button
+                        onClick={() => handleViewReport(report)}
+                        className="text-sm text-[#0066FF] hover:text-blue-400 font-medium"
+                      >
+                        Подробнее
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteClick(report.id)}
+                      className="p-2 text-[#FF3B30] hover:text-red-400 hover:bg-[#FF3B30]/20 rounded-full transition-colors"
+                      title="Удалить отчет"
+                    >
+                      <FiTrash className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-[#A0A8B8] py-6">Отчетов по заданным критериям не найдено.</p>
+            )}
+          </div>
+        )}
+      </div>
       <AdminShiftReportModal
         isOpen={isModalOpen}
         reportData={selectedReport}

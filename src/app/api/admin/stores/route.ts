@@ -3,6 +3,9 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
 
+// Отключаем кэширование
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +21,8 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ stores });
+    // Возвращаем массив, а не объект
+    return NextResponse.json(stores);
   } catch (error) {
     console.error("Ошибка при получении списка магазинов:", error);
     return NextResponse.json({ message: "Ошибка сервера" }, { status: 500 });
@@ -34,7 +38,6 @@ export async function POST(req: Request) {
 
     const { name, address, cashierIds } = await req.json();
 
-    // Проверка обязательных данных
     if (!name || !address) {
       return NextResponse.json(
         { message: "Поля name и address обязательны." },
@@ -56,7 +59,8 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ store });
+    // Возвращаем объект с ключом store
+    return NextResponse.json({ store }, { status: 201 });
   } catch (error) {
     console.error("Ошибка при создании магазина:", error);
     return NextResponse.json({ message: "Ошибка сервера" }, { status: 500 });

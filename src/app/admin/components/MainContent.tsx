@@ -1,17 +1,18 @@
 import CashiersSection from "../sections/CashiersSection";
 import ProductsSection from "../sections/ProductsSection";
 import StoresSection from "../sections/StoresSection";
+import ReportsSection from "./ReportsSection"; // Импортируем секцию отчетов
 import type { Cashier, Product, Store } from "../types";
 
 interface MainContentProps {
-  tab: "cashiers" | "products" | "stores";
+  tab: "cashiers" | "products" | "stores" | "reports";
   // Props for CashiersSection
   cashiersProps: {
     email: string;
     password: string;
     cashiers: Cashier[];
     loadingCashiers: boolean;
-    cashierMessage: { text: string | null; type: "success" | "error" } | null;
+    cashierMessage: { text: string | null; type: "success" | "error" | "info" } | null;
     isLoadingCashierAction: boolean;
     searchTermCashiers: string;
     setEmail: (v: string) => void;
@@ -24,9 +25,9 @@ interface MainContentProps {
   // Props for ProductsSection
   productsProps: {
     products: Product[];
-    setProducts: React.Dispatch<React.SetStateAction<Product[]>>; // <--- ДОБАВЛЕНО ЗДЕСЬ
+    setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
     loadingProducts: boolean;
-    productMessage: { text: string | null; type: "success" | "error" } | null;
+    productMessage: { text: string | null; type: "success" | "error" | "info" } | null;
     isLoadingProductAction: boolean;
     productName: string;
     productPurchasePrice: string;
@@ -57,7 +58,7 @@ interface MainContentProps {
     stores: Store[];
     cashiers: Cashier[];
     loadingStores: boolean;
-    storeMessage: { text: string | null; type: "success" | "error" } | null;
+    storeMessage: { text: string | null; type: "success" | "error" | "info" } | null;
     isLoadingStoreAction: boolean;
     editStore: Store | null;
     searchTermStores: string;
@@ -67,9 +68,9 @@ interface MainContentProps {
     setSearchTermStores: (v: string) => void;
     handleStoreSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
     handleEditStore: (store: Store) => void;
-    handleDeleteStore: (id: string) => void;
+    handleDeleteStore: (storeId: string) => void;
     resetStoreForm: () => void;
-    setStoreMessage: (v: { text: string | null; type: "success" | "error" } | null) => void;
+    setStoreMessage: (v: { text: string | null; type: "success" | "error" | "info" } | null) => void;
   };
 }
 
@@ -84,6 +85,7 @@ export default function MainContent({
       {tab === "cashiers" && <CashiersSection {...cashiersProps} />}
       {tab === "products" && <ProductsSection {...productsProps} />}
       {tab === "stores" && <StoresSection {...storesProps} />}
+      {tab === "reports" && <ReportsSection />}
     </div>
   );
 }

@@ -5,6 +5,9 @@ import { authOptions } from "@/lib/authOptions";
 import { writeFile } from "fs/promises";
 import path from "path";
 
+// Отключаем кэширование
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -22,7 +25,8 @@ export async function GET() {
         },
       },
     });
-    return NextResponse.json({ products });
+    // Возвращаем массив, а не объект
+    return NextResponse.json(products);
   } catch (error) {
     console.error("Ошибка при получении списка товаров:", error);
     return NextResponse.json({ message: "Ошибка сервера" }, { status: 500 });
@@ -44,7 +48,6 @@ export async function POST(req: Request) {
     const image = formData.get("image") as File | null;
     const storesRaw = formData.get("stores") as string | null;
 
-    // Валидация основных полей
     if (!name || !purchasePriceStr || !salePriceStr || !quantityStr) {
       return NextResponse.json(
         { message: "Поля name, purchasePrice, salePrice, quantity обязательны." },
@@ -122,6 +125,7 @@ export async function POST(req: Request) {
       },
     });
 
+    // Возвращаем объект с ключом product
     return NextResponse.json({ product: productWithStores }, { status: 201 });
   } catch (error) {
     console.error("Ошибка при создании товара:", error);

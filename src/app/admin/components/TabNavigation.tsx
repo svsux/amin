@@ -19,21 +19,21 @@ const tabs = [
 
 export default function TabNavigation({ currentTab, onTabChange }: TabNavigationProps) {
   return (
-    <nav className="flex justify-center border-b border-gray-200">
+    <nav className="flex justify-center border-b border-[#1E2228]">
       {tabs.map((tab) => (
         <button
           key={tab.id}
           className={clsx(
             "py-3 px-4 sm:px-6 font-semibold flex items-center gap-2 transition-all duration-150 ease-in-out -mb-px",
             currentTab === tab.id
-              ? "border-b-2 border-indigo-600 text-indigo-700"
-              : "text-gray-500 hover:text-gray-700 hover:border-gray-300 border-b-2 border-transparent"
+              ? "border-b-2 border-[#0066FF] text-[#0066FF]"
+              : "text-[#A0A8B8] hover:text-white hover:border-gray-700 border-b-2 border-transparent"
           )}
           onClick={() => onTabChange(tab.id as Tab)}
         >
           <tab.icon
             className={`${
-              currentTab === tab.id ? "text-indigo-500" : "text-gray-400 group-hover:text-gray-500"
+              currentTab === tab.id ? "text-[#0066FF]" : "text-gray-500 group-hover:text-gray-400"
             } -ml-0.5 mr-2 h-5 w-5`}
             aria-hidden="true"
           />

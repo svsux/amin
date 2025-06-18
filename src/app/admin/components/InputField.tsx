@@ -29,13 +29,13 @@ export default function InputField({
     <div>
       <label
         htmlFor={id}
-        className="block text-sm font-medium text-gray-700 mb-1"
+        className="block text-sm font-medium text-[#A0A8B8] mb-1"
       >
         {label}
       </label>
       <div className="relative">
         {icon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
             {icon}
           </div>
         )}
@@ -51,7 +51,7 @@ export default function InputField({
           minLength={minLength}
           className={`block w-full px-3 py-2 ${
             icon ? "pl-10" : ""
-          } border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors text-gray-900 ${className || ""}`}
+          } bg-[#121418] border border-[#1E2228] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] sm:text-sm transition-colors text-white placeholder:text-[#A0A8B8]/50 ${className || ""}`}
         />
       </div>
     </div>

@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import InputField from "./InputField";
 import PrimaryButton from "./PrimaryButton";
-import { motion } from "framer-motion"; // Импортируем motion
+import { motion } from "framer-motion";
 
 interface Cashier {
   id: string;
   email: string;
-  // добавьте другие поля, если они есть
 }
 
 export default function CashierEditModal({
@@ -36,6 +35,7 @@ export default function CashierEditModal({
 
   const handleSaveClick = () => {
     if (!editedEmail.trim()) {
+      // Можно заменить на более красивое уведомление в будущем
       alert("Email не может быть пустым.");
       return;
     }
@@ -44,27 +44,27 @@ export default function CashierEditModal({
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
     >
       <motion.div
-        className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative"
+        className="bg-[#121418] rounded-lg shadow-xl p-6 w-full max-w-md relative border border-[#1E2228]"
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ duration: 0.2, delay: 0.05 }}
       >
         <button
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
+          className="absolute top-3 right-3 text-[#A0A8B8] hover:text-white text-2xl transition-colors"
           onClick={onClose}
           aria-label="Закрыть"
         >
-          ×
+          &times;
         </button>
-        <h3 className="text-lg font-semibold mb-4 text-indigo-700">Редактировать кассира</h3>
+        <h3 className="text-lg font-semibold mb-4 text-white">Редактировать кассира</h3>
         <div className="space-y-4">
           <InputField
             label="Email"
@@ -84,7 +84,15 @@ export default function CashierEditModal({
             placeholder="Оставьте пустым, чтобы не менять"
           />
         </div>
-        <div className="flex gap-2 mt-6">
+        <div className="flex gap-3 mt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isLoading}
+            className="flex-1 py-2.5 px-4 border border-[#1E2228] rounded-md shadow-sm text-sm font-semibold text-[#A0A8B8] hover:bg-[#1E2228] transition-colors disabled:opacity-50"
+          >
+            Отмена
+          </button>
           <PrimaryButton
             type="button"
             onClick={handleSaveClick}
@@ -93,14 +101,6 @@ export default function CashierEditModal({
           >
             {isLoading ? "Сохранение..." : "Сохранить"}
           </PrimaryButton>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isLoading}
-            className="flex-1 py-2.5 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-          >
-            Отмена
-          </button>
         </div>
       </motion.div>
     </motion.div>

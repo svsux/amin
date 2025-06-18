@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { MdImageNotSupported } from "react-icons/md";
 
 interface Product {
   id: string;
@@ -17,6 +18,10 @@ interface Props {
   setNotification: (notification: { message: string; type: 'success' | 'error' } | null) => void;
 }
 
+const CARD_HEIGHT = 210; // высота карточки товара (min-h-[210px])
+const CARD_GAP = 16;     // gap-4 = 1rem = 16px
+const ASSORTMENT_HEIGHT = CARD_HEIGHT * 2 + CARD_GAP; // две карточки + gap
+
 const CashRegister: React.FC<Props> = ({ isShiftOpen, dataVersion, onPaymentSuccess, setNotification }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<{ id: string; quantity: number }[]>([]);
@@ -24,6 +29,7 @@ const CashRegister: React.FC<Props> = ({ isShiftOpen, dataVersion, onPaymentSucc
   const [paymentMethod, setPaymentMethod] = useState<"card" | "qr" | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (isShiftOpen) {
@@ -140,48 +146,72 @@ const CashRegister: React.FC<Props> = ({ isShiftOpen, dataVersion, onPaymentSucc
     }
   };
 
+  // Фильтрация товаров по поиску
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md space-y-6 relative">
+    <div className="bg-transparent p-0 rounded-lg shadow-none space-y-6 relative text-white min-h-[540px] flex flex-col justify-between">
       {!isShiftOpen && (
-        <div className="absolute inset-0 bg-gray-200 bg-opacity-75 flex justify-center items-center z-10 rounded-lg">
-          <p className="text-xl font-bold text-gray-700">Смена закрыта. Откройте смену, чтобы начать работу.</p>
+        <div className="absolute inset-0 bg-[#181B20] bg-opacity-90 flex justify-center items-center z-10 rounded-lg">
+          <p className="text-xl font-bold text-gray-400">Смена закрыта. Откройте смену, чтобы начать работу.</p>
         </div>
       )}
-      <h2 className="text-xl font-bold text-gray-800">Касса</h2>
-      {error && <div className="text-red-500 text-sm">{error}</div>}
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Список товаров */}
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-700">Ассортимент</h3>
+      <h2 className="text-xl font-bold text-indigo-400 mb-0">Касса</h2>
+      <div className="grid grid-cols-1 md:grid-cols-[2fr_1px_1fr] gap-6 flex-1">
+        {/* Ассортимент */}
+        <div className="flex flex-col" style={{ height: ASSORTMENT_HEIGHT }}>
+          {/* <h3 className="text-lg font-semibold text-gray-200 mb-2">Ассортимент</h3> */}
+          {/* Поиск */}
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Поиск по названию..."
+            className="mb-3 px-3 py-2 rounded-md bg-[#23262B] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
           {loading ? (
-            <div>Загрузка...</div>
+            <div className="text-gray-400">Загрузка...</div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[32rem] overflow-y-auto p-1">
-              {products.map((product) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 h-full overflow-y-auto p-1">
+              {filteredProducts.length > 0 ? filteredProducts.map((product) => {
                 const cartItem = selectedProducts.find(p => p.id === product.id);
                 const inCartQuantity = cartItem?.quantity || 0;
                 const displayQuantity = product.quantity - inCartQuantity;
                 const isOutOfStock = displayQuantity <= 0;
 
                 return (
-                  <div key={product.id} className="border rounded-lg shadow-sm flex flex-col overflow-hidden">
-                    <div className="relative w-full h-32 bg-gray-200">
-                      <img
-                        src={product.imageUrl || "https://via.placeholder.com/300"}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
+                  <div
+                    key={product.id}
+                    className="border border-[#23262B] rounded-lg shadow-sm flex flex-col overflow-hidden bg-[#181B20] min-h-[210px] h-[210px]"
+                  >
+                    <div className="w-full flex-shrink-0" style={{ height: "110px" }}>
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          style={{ maxHeight: "110px", minHeight: "110px" }}
+                          onError={e => {
+                            (e.currentTarget as HTMLImageElement).src = "/no-image.svg";
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-[#23262B]">
+                          <MdImageNotSupported className="text-4xl text-gray-500 opacity-60" />
+                        </div>
+                      )}
                     </div>
-                    <div className="p-3 flex flex-col flex-grow">
-                      <h4 className="font-semibold text-gray-800 truncate">{product.name}</h4>
-                      <p className="text-sm text-gray-500">Остаток: {displayQuantity}</p>
+                    <div className="p-3 flex flex-col flex-1 min-h-0">
+                      <h4 className="font-semibold text-white truncate">{product.name}</h4>
+                      <p className="text-sm text-gray-400">Остаток: {displayQuantity}</p>
                       <div className="mt-auto pt-2 flex justify-between items-center">
-                        <p className="font-bold text-lg text-indigo-600">{product.price}₽</p>
+                        <p className="font-bold text-lg text-indigo-400">{product.price}₽</p>
                         <button
                           onClick={() => handleAddProduct(product.id)}
                           disabled={isOutOfStock}
-                          className="px-2 py-1 bg-indigo-500 text-white rounded-md text-xs hover:bg-indigo-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                          className="px-2 py-1 bg-indigo-600 text-white rounded-md text-xs hover:bg-indigo-700 disabled:bg-gray-700 disabled:cursor-not-allowed"
                         >
                           В чек
                         </button>
@@ -189,48 +219,61 @@ const CashRegister: React.FC<Props> = ({ isShiftOpen, dataVersion, onPaymentSucc
                     </div>
                   </div>
                 );
-              })}
+              }) : (
+                <p className="text-gray-400 text-sm col-span-3 text-center">Товары не найдены</p>
+              )}
             </div>
           )}
         </div>
-
-        {/* Чек */}
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-700">Текущий чек</h3>
-          <ul className="space-y-2 max-h-64 overflow-y-auto pr-2 border-b pb-4">
+        {/* Вертикальная линия-разделитель */}
+        <div className="hidden md:block h-full">
+          <div className="border-r border-[#23262B] border-opacity-60 h-full mx-auto"></div>
+        </div>
+        {/* Текущий чек */}
+        <div className="flex flex-col h-full">
+          <h3 className="text-lg font-semibold text-gray-200 mb-2">Текущий чек</h3>
+          <ul className="space-y-2 max-h-64 overflow-y-auto pr-2 border-b border-[#23262B] pb-4 flex-1">
             {selectedProducts.length > 0 ? selectedProducts.map((item) => {
               const product = products.find((p) => p.id === item.id);
               return (
-                <li key={item.id} className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded-md">
-                  <div className="font-medium text-gray-800">
+                <li key={item.id} className="flex justify-between items-center text-sm bg-[#23262B] p-2 rounded-md">
+                  <div className="font-medium text-white">
                     <p>{product?.name}</p>
-                    <p className="text-xs text-gray-500">x {item.quantity}</p>
+                    <p className="text-xs text-gray-400">x {item.quantity}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-gray-900">{(product?.price || 0) * item.quantity}₽</span>
-                    <button onClick={() => handleRemoveProduct(item.id)} className="px-2 py-0.5 bg-red-500 text-white rounded hover:bg-red-600">-</button>
+                    <span className="font-semibold text-indigo-400">{(product?.price || 0) * item.quantity}₽</span>
+                    <button onClick={() => handleRemoveProduct(item.id)} className="px-2 py-0.5 bg-red-600 text-white rounded hover:bg-red-700">-</button>
                   </div>
                 </li>
               );
-            }) : <p className="text-gray-500 text-sm">Чек пуст</p>}
+            }) : <p className="text-gray-400 text-sm">Чек пуст</p>}
           </ul>
           
           {/* Итог и оплата */}
-          <div className="space-y-4 pt-4">
+          <div className="space-y-4 pt-4 mt-auto">
             <div className="flex justify-between items-center">
-              <h3 className="text-2xl font-bold text-gray-900">Итого:</h3>
-              <h3 className="text-2xl font-bold text-gray-900">{total.toFixed(2)}₽</h3>
+              <h3 className="text-2xl font-bold text-white">Итого:</h3>
+              <h3 className="text-2xl font-bold text-indigo-400">{total.toFixed(2)}₽</h3>
             </div>
             <div className="flex gap-4">
               <button
                 onClick={() => setPaymentMethod("card")}
-                className={`w-full py-2 rounded-md ${paymentMethod === "card" ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                className={`w-full py-2 rounded-md font-semibold transition ${
+                  paymentMethod === "card"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-[#23262B] text-gray-300 hover:bg-indigo-700"
+                }`}
               >
                 Картой
               </button>
               <button
                 onClick={() => setPaymentMethod("qr")}
-                className={`w-full py-2 rounded-md ${paymentMethod === "qr" ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-700"}`}
+                className={`w-full py-2 rounded-md font-semibold transition ${
+                  paymentMethod === "qr"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-[#23262B] text-gray-300 hover:bg-indigo-700"
+                }`}
               >
                 Наличными
               </button>
@@ -238,7 +281,7 @@ const CashRegister: React.FC<Props> = ({ isShiftOpen, dataVersion, onPaymentSucc
             <button
               onClick={handlePayment}
               disabled={loading || selectedProducts.length === 0 || !paymentMethod}
-              className="w-full px-4 py-3 rounded-md font-bold text-white transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed bg-green-500 hover:bg-green-600"
+              className="w-full px-4 py-3 rounded-md font-bold text-white transition-colors duration-200 disabled:bg-gray-700 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700"
             >
               {loading ? "Обработка..." : "Провести оплату"}
             </button>

@@ -7,18 +7,18 @@ interface HeaderProps {
 
 export default function Header({ userEmail }: HeaderProps) {
   return (
-    <header className="bg-white shadow-md sticky top-0 z-20">
+    <header className="bg-[#121418] border-b border-[#1E2228] sticky top-0 z-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center gap-3">
-            <FiHome className="text-indigo-600 h-8 w-8" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Панель администратора</h1>
+            <FiHome className="text-[#0066FF] h-8 w-8" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">Панель администратора</h1>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600 hidden sm:block">Привет, {userEmail}</span>
+            <span className="text-sm text-[#A0A8B8] hidden sm:block">Привет, {userEmail}</span>
             <button
               onClick={() => signOut()}
-              className="text-sm text-indigo-600 hover:text-indigo-800 font-semibold transition-colors flex items-center gap-1"
+              className="text-sm text-[#0066FF] hover:text-blue-400 font-semibold transition-colors flex items-center gap-1"
             >
               <FiLogOut /> На главную
             </button>

@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import Alert from "../components/Alert";
 import InputField from "../components/InputField";
 import PrimaryButton from "../components/PrimaryButton";
-import DangerButton from "../components/DangerButton";
-import ProductEditModal from "../components/ProductEditModal";
 import AnimatedSelect from "../components/AnimatedSelect";
 import Image from "next/image";
 import {
@@ -15,6 +13,7 @@ import {
   FiPackage,
   FiSearch,
   FiEdit,
+  FiUploadCloud,
 } from "react-icons/fi";
 import type { Product, Store } from "../types";
 
@@ -22,9 +21,8 @@ type StoreOption = { label: string; value: string };
 
 interface Props {
   products: Product[];
-  setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
   loadingProducts: boolean;
-  productMessage: { text: string | null; type: "success" | "error" } | null;
+  productMessage: { text: string | null; type: "success" | "error" | "info" } | null;
   isLoadingProductAction: boolean;
   productName: string;
   productPurchasePrice: string;
@@ -32,7 +30,6 @@ interface Props {
   productImage: File | null;
   productQuantity: string;
   searchTermProducts: string;
-  editingProduct: Product | null;
   selectedStores: string[];
   stores: Store[];
   setProductName: (v: string) => void;
@@ -50,7 +47,6 @@ interface Props {
 
 const ProductsSection: React.FC<Props> = ({
   products,
-  setProducts,
   loadingProducts,
   productMessage,
   isLoadingProductAction,
@@ -60,7 +56,6 @@ const ProductsSection: React.FC<Props> = ({
   productImage,
   productQuantity,
   searchTermProducts,
-  editingProduct,
   selectedStores,
   stores,
   setProductName,
@@ -75,8 +70,6 @@ const ProductsSection: React.FC<Props> = ({
   handleDeleteProduct,
   resetProductForm,
 }) => {
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
   const storeOptions: StoreOption[] = stores.map((store) => ({
     value: String(store.id),
     label: store.name,
@@ -93,119 +86,21 @@ const ProductsSection: React.FC<Props> = ({
     setProductImage(file);
   };
 
-  const handleChange = (selectedOptions: readonly StoreOption[] | null) => {
+  const handleStoreSelectChange = (selectedOptions: readonly StoreOption[] | null) => {
     const updatedStores = selectedOptions ? selectedOptions.map((o) => o.value) : [];
     setSelectedStores(updatedStores);
-    console.log("Client: selectedStores после выбора:", updatedStores);
   };
 
-  const openEditModal = (product: Product) => {
-    handleEditProduct(product);
-    setIsEditModalOpen(true);
-  };
-
-  const closeEditModal = () => {
-    resetProductForm();
-    setIsEditModalOpen(false);
-  };
-
-  const handleEditSubmit = async (data: {
-    name: string;
-    purchasePrice: string;
-    salePrice: string;
-    quantity: string;
-    image: File | null;
-    stores: string[];
-  }) => {
-    if (!editingProduct) return;
-
-    try {
-      const formData = new FormData();
-      formData.append("name", data.name);
-      formData.append("purchasePrice", data.purchasePrice);
-      formData.append("salePrice", data.salePrice);
-      formData.append("quantity", data.quantity);
-      formData.append("stores", JSON.stringify(data.stores));
-      if (data.image) {
-        formData.append("image", data.image);
-      }
-
-      const res = await fetch(`/api/admin/products/${editingProduct.id}`, {
-        method: "PATCH",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const errorMessage = await res.text();
-        console.error(`Ошибка при обновлении товара: ${errorMessage}`);
-        throw new Error(`Ошибка при обновлении товара (${res.status}): ${errorMessage}`);
-      }
-
-      const updatedProduct: Product = await res.json();
-      console.log("✅ Обновлённый товар:", updatedProduct);
-
-      setProducts((prevProducts) =>
-        prevProducts.map((product) =>
-          product.id === updatedProduct.id ? updatedProduct : product
-        )
-      );
-
-      closeEditModal();
-    } catch (error) {
-      console.error("❌ Ошибка обновления товара:", error);
-    }
-  };
-
-  const customStyles = {
-    option: (provided: any, state: any) => ({
-      ...provided,
-      backgroundColor: state.isSelected ? "#6366f1" : state.isFocused ? "#e0e7ff" : "#ffffff",
-      color: state.isSelected ? "#ffffff" : "#374151",
-      fontWeight: state.isSelected ? 500 : 400,
-    }),
-    multiValue: (provided: any) => ({
-      ...provided,
-      backgroundColor: "#e0e7ff",
-      color: "#4338ca",
-    }),
-    multiValueLabel: (provided: any) => ({
-      ...provided,
-      color: "#4338ca",
-    }),
-    multiValueRemove: (provided: any, state: any) => ({
-      ...provided,
-      color: state.isFocused ? "#4338ca" : "#6366f1",
-      backgroundColor: "transparent",
-      ":hover": {
-        color: "#4338ca",
-      },
-    }),
-    control: (provided: any) => ({
-      ...provided,
-      borderColor: "#d1d5db",
-      ":hover": {
-        borderColor: "#6366f1",
-      },
-    }),
-  };
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(searchTermProducts.toLowerCase())
+  );
 
   return (
     <section className="space-y-10">
-      {isEditModalOpen && editingProduct && (
-        <ProductEditModal
-          isOpen={isEditModalOpen}
-          onClose={closeEditModal}
-          editingProduct={editingProduct}
-          storeOptions={storeOptions}
-          onSubmit={handleEditSubmit}
-          isLoading={isLoadingProductAction}
-        />
-      )}
-
-      {/* Добавление нового товара */}
-      <div className="bg-white/80 backdrop-blur-md border border-gray-200 shadow-xl rounded-2xl p-6 sm:p-8 transition-all">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
-          <FiPlus className="text-indigo-600" />
+      {/* Форма добавления нового товара */}
+      <div className="bg-[#121418]/80 backdrop-blur-md border border-[#1E2228] shadow-xl rounded-2xl p-8 transition-all">
+        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+          <FiPlus className="text-[#0066FF]" />
           Добавить новый товар
         </h2>
 
@@ -213,19 +108,19 @@ const ProductsSection: React.FC<Props> = ({
           <Alert message={productMessage.text} type={productMessage.type || "info"} />
         )}
 
-        <form onSubmit={handleProductSubmit} className="space-y-4 sm:space-y-5">
+        <form onSubmit={handleProductSubmit} className="space-y-5">
           <InputField
             label="Название товара"
             id="product-name"
             value={productName}
             onChange={(e) => setProductName(e.target.value)}
             required
-            placeholder="Например, Хлеб"
+            placeholder="Например, Хлеб 'Бородинский'"
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <InputField
-              label="Закупочная цена (₽)"
+              label="Закуп. цена (₽)"
               id="product-purchase-price"
               type="number"
               value={productPurchasePrice}
@@ -246,53 +141,59 @@ const ProductsSection: React.FC<Props> = ({
               step="0.01"
               placeholder="150.00"
             />
+            <InputField
+              label="Кол-во на складе"
+              id="product-quantity"
+              type="number"
+              value={productQuantity}
+              onChange={(e) => setProductQuantity(e.target.value)}
+              required
+              min={0}
+              placeholder="10"
+            />
           </div>
 
-          <InputField
-            label="Количество на складе"
-            id="product-quantity"
-            type="number"
-            value={productQuantity}
-            onChange={(e) => setProductQuantity(e.target.value)}
-            required
-            min={0}
-            placeholder="10"
-          />
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Магазины, где есть товар
+            <label className="block text-sm font-medium text-[#A0A8B8] mb-1">
+              Магазины, где будет доступен товар
             </label>
             <AnimatedSelect
               isMulti
               options={storeOptions}
               value={storeOptions.filter(option => selectedStores.includes(option.value))}
-              onChange={handleChange}
-              className="react-select-container"
+              onChange={handleStoreSelectChange}
               classNamePrefix="react-select"
               placeholder="Выберите магазины..."
-              styles={customStyles}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Изображение товара (необязательно)
+            <label className="block text-sm font-medium text-[#A0A8B8] mb-1">
+              Изображение товара
             </label>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleFileClick}
-                className="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 transition"
-              >
-                Выберите файл
-              </button>
-              <span className="text-sm text-gray-500">
-                {productImage?.name || "Файл не выбран"}
-              </span>
+            <div
+              onClick={handleFileClick}
+              className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-[#1E2228] border-dashed rounded-md cursor-pointer hover:border-[#0066FF]/60 transition-colors"
+            >
+              <div className="space-y-1 text-center">
+                <FiUploadCloud className="mx-auto h-12 w-12 text-[#A0A8B8]" />
+                <div className="flex text-sm text-[#A0A8B8]">
+                  <p className="pl-1">
+                    {productImage ? (
+                      <span className="font-semibold text-white">{productImage.name}</span>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-[#0066FF]">Нажмите, чтобы загрузить</span> или перетащите файл
+                      </>
+                    )}
+                  </p>
+                </div>
+                <p className="text-xs text-[#A0A8B8]/70">PNG, JPG, GIF до 10MB</p>
+              </div>
             </div>
             <input
               ref={fileInputRef}
+              id="product-image-input"
               type="file"
               accept="image/*"
               onChange={handleFileChange}
@@ -300,100 +201,104 @@ const ProductsSection: React.FC<Props> = ({
             />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-3 pt-1">
             <PrimaryButton type="submit" disabled={isLoadingProductAction} className="flex-1">
               {isLoadingProductAction ? "Добавление..." : "Добавить товар"}
             </PrimaryButton>
+            <button
+              type="button"
+              onClick={resetProductForm}
+              className="flex-1 py-2.5 px-4 border border-[#1E2228] rounded-md shadow-sm text-sm font-semibold text-[#A0A8B8] bg-[#121418] hover:bg-[#1E2228] transition-colors"
+            >
+              Очистить форму
+            </button>
           </div>
         </form>
       </div>
 
       {/* Список товаров */}
-      <div className="bg-white/80 backdrop-blur-md border border-gray-200 shadow-xl rounded-2xl p-6 sm:p-8 transition-all">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
-          <FiPackage className="text-indigo-600" />
+      <div className="bg-[#121418]/80 backdrop-blur-md border border-[#1E2228] shadow-xl rounded-2xl p-8 transition-all">
+        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+          <FiPackage className="text-[#0066FF]" />
           Список товаров
         </h2>
 
-        <div className="mb-4 sm:mb-6 relative">
+        <div className="mb-6 relative">
           <InputField
             label="Поиск по названию товара"
             id="search-product"
             type="search"
             value={searchTermProducts}
             onChange={(e) => setSearchTermProducts(e.target.value)}
-            placeholder="Поиск по названию..."
-            className="pl-10"
+            placeholder="Введите название..."
             icon={<FiSearch className="w-5 h-5 text-gray-400" />}
           />
         </div>
 
         {loadingProducts ? (
-          <p className="text-gray-600 text-center py-4">Загрузка товаров...</p>
-        ) : products.length === 0 ? (
-          <p className="text-gray-600 text-center py-4">Товары не найдены или еще не добавлены.</p>
+          <p className="text-[#A0A8B8] text-center py-4">Загрузка товаров...</p>
+        ) : filteredProducts.length === 0 ? (
+          <p className="text-[#A0A8B8] text-center py-4">Товары не найдены.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-h-[60vh] overflow-y-auto pr-2">
-            {products.map((product) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredProducts.map((product) => (
               <div
                 key={product.id}
-                className="bg-white rounded-xl border border-gray-200 shadow hover:shadow-md p-4 sm:p-5 flex flex-col justify-between transition-all"
+                className="bg-[#0F1115] rounded-2xl border border-[#1E2228] p-5 flex flex-col justify-between transition-all duration-300 hover:border-[#0066FF]/60 hover:shadow-lg hover:shadow-[#0066FF]/10"
               >
-                <div className="flex items-center gap-4">
-                  {product.imageUrl ? (
-                    <Image
-                      src={product.imageUrl}
-                      alt={product.name}
-                      width={60}
-                      height={60}
-                      className="object-cover rounded-md"
-                    />
-                  ) : (
-                    <div className="w-[60px] h-[60px] bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
-                      <FiBox size={28} className="text-gray-500" />
+                <div className="flex-grow">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      {product.imageUrl ? (
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.name}
+                          width={80}
+                          height={80}
+                          className="object-cover rounded-lg border border-[#1E2228]"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 bg-[#121418] rounded-lg flex items-center justify-center text-[#A0A8B8] border border-[#1E2228]">
+                          <FiBox size={32} />
+                        </div>
+                      )}
                     </div>
-                  )}
-                  <div>
-                    <h3 className="font-semibold text-lg text-gray-900">{product.name}</h3>
-                    <p className="text-sm text-gray-600">Закуп: {product.purchasePrice}₽</p>
-                    <p className="text-sm text-gray-600">Продажа: {product.salePrice}₽</p>
-                    <p className="text-sm text-gray-600">Кол-во: {product.quantity}</p>
-                    <p className="text-xs text-gray-500 mt-2">
-                      <span className="font-medium">Магазины:</span>{" "}
-                      {
-                        product.storeProducts?.length
-                          ? product.storeProducts
-                              .map((sp) =>
-                                sp.store?.address
-                                  ? `${sp.store.name} (${sp.store.address})`
-                                  : sp.store?.name
-                              )
-                              .filter(Boolean)
-                              .join(", ")
-                          : "Нет"
-                      }
-                    </p>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg text-white leading-tight">{product.name}</h3>
+                      <p className="text-sm text-[#A0A8B8] mt-1">
+                        В наличии: <span className="font-semibold text-white">{product.quantity} шт.</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-[#A0A8B8]">Закупка:</span>
+                      <span className="font-mono text-white">{product.purchasePrice.toFixed(2)} ₽</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#A0A8B8]">Продажа:</span>
+                      <span className="font-mono font-bold text-green-400">{product.salePrice.toFixed(2)} ₽</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-4">
-                  <PrimaryButton
-                    type="button"
-                    onClick={() => openEditModal(product)}
+                <div className="flex items-center gap-3 pt-5 mt-5 border-t border-[#1E2228]">
+                  <button
+                    onClick={() => handleEditProduct(product)}
                     disabled={isLoadingProductAction}
-                    className="flex-1"
+                    className="flex-1 inline-flex justify-center items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0066FF]/10 border border-transparent rounded-md hover:bg-[#0066FF]/20 transition-colors disabled:opacity-50"
                   >
-                    <FiEdit className="mr-2 text-white" />
-                    Редактировать
-                  </PrimaryButton>
-                  <DangerButton
+                    <FiEdit />
+                    Изменить
+                  </button>
+                  <button
                     onClick={() => handleDeleteProduct(product.id)}
                     disabled={isLoadingProductAction}
-                    className="flex-1"
+                    className="p-2 text-[#FF3B30] hover:bg-[#FF3B30]/20 rounded-md transition-colors disabled:opacity-50"
+                    title="Удалить товар"
                   >
-                    <FiTrash className="mr-2 text-white" />
-                    Удалить
-                  </DangerButton>
+                    <FiTrash />
+                  </button>
                 </div>
               </div>
             ))}

@@ -45,32 +45,32 @@ const TransactionLogs: React.FC<Props> = ({ isShiftOpen, dataVersion }) => {
   }, [isShiftOpen, dataVersion]); // Обновляем логи при изменении статуса смены или по триггеру
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md space-y-4 relative">
+    <div className="bg-transparent p-0 rounded-lg shadow-none space-y-4 relative text-white">
       {!isShiftOpen && transactions.length === 0 && (
-         <div className="absolute inset-0 bg-gray-200 bg-opacity-75 flex justify-center items-center z-10 rounded-lg">
-          <p className="text-lg font-bold text-gray-700">Смена закрыта</p>
+         <div className="absolute inset-0 bg-[#181B20] bg-opacity-90 flex justify-center items-center z-10 rounded-lg">
+          <p className="text-lg font-bold text-gray-400">Смена закрыта</p>
         </div>
       )}
-      <h2 className="text-xl font-bold text-gray-800">История операций</h2>
+      <h2 className="text-xl font-bold text-white">История операций</h2>
       
-      {loading && <div className="text-gray-500 text-sm">Загрузка логов...</div>}
-      {error && <div className="text-red-500 text-sm">Ошибка: {error}</div>}
+      {loading && <div className="text-gray-400 text-sm">Загрузка логов...</div>}
+      {error && <div className="text-red-400 text-sm">Ошибка: {error}</div>}
       
       {!loading && !error && (
         <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
           {transactions.length === 0 ? (
-            <p className="text-gray-500 text-sm">Операций пока не было.</p>
+            <p className="text-gray-400 text-sm">Операций пока не было.</p>
           ) : (
             transactions.map((transaction) => (
-              <li key={transaction.id} className="border-b pb-3">
+              <li key={transaction.id} className="border-b border-[#23262B] pb-3">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="font-bold text-gray-700">{transaction.total.toFixed(2)}₽</span>
-                  <span className="text-xs text-gray-500">{new Date(transaction.createdAt).toLocaleString()}</span>
+                  <span className="font-bold text-indigo-400">{transaction.total.toFixed(2)}₽</span>
+                  <span className="text-xs text-gray-400">{new Date(transaction.createdAt).toLocaleString()}</span>
                 </div>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-300">
                   Оплата: {transaction.paymentMethod === "card" ? "Карта" : "Наличные"}
                 </p>
-                <ul className="pl-4 mt-1 text-xs text-gray-500 list-disc list-inside">
+                <ul className="pl-4 mt-1 text-xs text-gray-400 list-disc list-inside">
                   {transaction.products.map((product, index) => (
                     <li key={index}>
                       {product.name} x {product.quantity}

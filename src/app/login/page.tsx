@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useRef } from "react";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -12,9 +12,14 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const abortedRef = useRef(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    // Сбрасываем состояние "абортирован" при новом сабмите
+    abortedRef.current = false;
+
     setIsLoading(true);
     setError(null);
 
@@ -25,6 +30,8 @@ export default function LoginPage() {
         password,
       });
 
+      if (abortedRef.current) return; // Если пользователь нажал "На главную", ничего не делаем
+
       if (result?.error) {
         setError(
           result.error === "CredentialsSignin"
@@ -34,9 +41,33 @@ export default function LoginPage() {
         setIsLoading(false);
       } else if (result?.ok) {
         const session = await getSession();
+        if (abortedRef.current) return;
+
         if (session?.user?.role === "ADMIN") {
           router.replace("/admin");
         } else if (session?.user?.role === "CASHIER") {
+          const res = await fetch("/api/cashier/store", { cache: "no-store" });
+          if (abortedRef.current) return;
+
+          if (!res.ok) {
+            setError("Вы не привязаны ни к одному магазину. Обратитесь к администратору.");
+            setIsLoading(false);
+            return;
+          }
+
+          const data = await res.json();
+          const stores = Array.isArray(data.stores)
+            ? data.stores
+            : Array.isArray(data.store)
+            ? data.store
+            : [];
+
+          if (stores.length === 0) {
+            setError("Вы не привязаны ни к одному магазину. Обратитесь к администратору.");
+            setIsLoading(false);
+            return;
+          }
+
           router.replace("/cashier");
         } else {
           router.replace("/");
@@ -46,16 +77,23 @@ export default function LoginPage() {
         setIsLoading(false);
       }
     } catch (err) {
+      if (abortedRef.current) return; // Если пользователь нажал "На главную", ничего не делаем
       console.error("Login error:", err);
       setError("Произошла ошибка при попытке входа.");
       setIsLoading(false);
     }
   };
 
+  const handleGoHome = () => {
+    // Устанавливаем состояние "абортирован"
+    abortedRef.current = true;
+    router.push("/");
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1F2937] via-[#3B82F6] to-[#10B981] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#0F1115] px-4">
       <motion.div
-        className="relative bg-white/10 backdrop-blur-xl shadow-2xl rounded-3xl p-10 w-full max-w-md text-white border border-white/20"
+        className="relative bg-[#181B20]/80 backdrop-blur-xl shadow-2xl rounded-3xl p-10 w-full max-w-md text-white border border-[#23262B]"
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
@@ -82,7 +120,10 @@ export default function LoginPage() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6, duration: 0.5 }}
           >
-            <label htmlFor="email" className="block mb-1 text-sm font-medium">
+            <label
+              htmlFor="email"
+              className="block mb-1 text-sm font-medium text-gray-300"
+            >
               Email
             </label>
             <input
@@ -91,7 +132,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 rounded-lg bg-white/20 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-2 rounded-lg bg-[#23262B] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="you@example.com"
             />
           </motion.div>
@@ -103,7 +144,7 @@ export default function LoginPage() {
           >
             <label
               htmlFor="password"
-              className="block mb-1 text-sm font-medium"
+              className="block mb-1 text-sm font-medium text-gray-300"
             >
               Пароль
             </label>
@@ -113,7 +154,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 rounded-lg bg-white/20 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-2 rounded-lg bg-[#23262B] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="Ваш пароль"
             />
           </motion.div>
@@ -125,7 +166,7 @@ export default function LoginPage() {
           <motion.button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 transition rounded-xl text-white font-semibold shadow-lg"
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 transition rounded-xl text-white font-semibold shadow-lg"
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
             transition={{ duration: 0.2 }}
@@ -135,8 +176,8 @@ export default function LoginPage() {
         </form>
 
         <motion.button
-          onClick={() => router.push("/")}
-          className="w-full mt-4 py-3 bg-gray-600 hover:bg-gray-700 rounded-xl font-semibold text-white transition"
+          onClick={handleGoHome}
+          className="w-full mt-4 py-3 bg-[#23262B] hover:bg-[#23262B]/80 rounded-xl font-semibold text-gray-200 transition"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           transition={{ duration: 0.2 }}
@@ -145,7 +186,7 @@ export default function LoginPage() {
         </motion.button>
 
         <motion.footer
-          className="mt-8 text-sm text-white/50 text-center"
+          className="mt-8 text-sm text-gray-500 text-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.1, duration: 0.6 }}

@@ -1,6 +1,8 @@
 export interface Cashier {
   id: string;
   email: string;
+  // ДОБАВЛЕНО: Это поле теперь приходит с API
+  storeCashiers?: { storeId: string; cashierId: string }[];
 }
 
 export interface Store {
@@ -31,7 +33,7 @@ export interface Product {
   salePrice: number;
   imageUrl?: string | null;
   quantity: number;
-  storeProducts?: StoreProduct[]; // 💡 типизировано правильно
+  storeProducts?: StoreProduct[];
 }
 
 export interface StoreProductAssociation {

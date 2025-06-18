@@ -42,23 +42,25 @@ const ShiftControl: React.FC<Props> = ({ isShiftOpen, onOpenShift, onCloseShift 
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md flex flex-col justify-center h-full">
-      <h2 className="text-lg font-semibold text-gray-800 text-center">
+    <div className="bg-indigo-700 rounded-2xl px-4 py-3 flex flex-col items-center w-full max-w-[260px]">
+      <h2 className="text-base font-bold text-white text-center mb-2">
         Управление сменой
       </h2>
-      {error && <div className="text-red-500 text-xs text-center mt-2">{error}</div>}
-      <div className="flex justify-center items-center gap-3 mt-2">
+
+      {error && <div className="text-red-200 text-xs text-center mb-2">{error}</div>}
+
+      <div className="flex gap-2 w-full justify-center">
         <button
           onClick={handleOpenShift}
           disabled={isShiftOpen || loading}
-          className="w-full px-4 py-2 rounded-md font-semibold text-white transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed bg-green-500 hover:bg-green-600 text-sm"
+          className="flex-1 py-1.5 px-3 rounded-md text-white text-sm font-semibold transition disabled:bg-indigo-900 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700"
         >
           {loading && !isShiftOpen ? "..." : "Открыть"}
         </button>
         <button
           onClick={handleCloseShift}
           disabled={!isShiftOpen || loading}
-          className="w-full px-4 py-2 rounded-md font-semibold text-white transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed bg-red-500 hover:bg-red-600 text-sm"
+          className="flex-1 py-1.5 px-3 rounded-md text-white text-sm font-semibold transition disabled:bg-indigo-900 disabled:cursor-not-allowed bg-indigo-900 hover:bg-indigo-800"
         >
           {loading && isShiftOpen ? "..." : "Закрыть"}
         </button>
