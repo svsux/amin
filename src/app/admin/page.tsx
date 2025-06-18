@@ -3,15 +3,17 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, FormEvent } from "react";
-import { FiHome, FiUsers, FiPackage, FiArchive, FiAlertCircle } from "react-icons/fi";
+// Добавляем иконку для отчетов, если понадобится в TabNavigation
+import { FiHome, FiUsers, FiPackage, FiArchive, FiAlertCircle, FiBarChart2 } from "react-icons/fi";
 import Header from "./components/Header";
 import TabNavigation from "./components/TabNavigation";
 import Footer from "./components/Footer";
 import MainContent from "./components/MainContent";
 import CashierEditModal from "./components/CashierEditModal";
 import ConfirmDialog from "./components/ConfirmDialog";
-import ProductEditModal from "./components/ProductEditModal"; // Добавьте импорт, если еще нет
-import { AnimatePresence } from "framer-motion"; // Импортируем AnimatePresence
+import ProductEditModal from "./components/ProductEditModal";
+import ReportsSection from "./components/ReportsSection"; // Импортируем компонент отчетов
+import { AnimatePresence } from "framer-motion";
 
 // Типы
 import type { Cashier, Product, Store } from "./types";
@@ -20,7 +22,8 @@ export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [tab, setTab] = useState<"cashiers" | "products" | "stores">("cashiers");
+  // Добавляем 'reports' в возможные значения для вкладок
+  const [tab, setTab] = useState<"cashiers" | "products" | "stores" | "reports">("cashiers");
 
   // --- Состояния для кассиров ---
   const [email, setEmail] = useState("");
@@ -486,83 +489,89 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       <Header userEmail={session?.user?.email || null} />
+      {/* Вам нужно будет добавить новую вкладку "Отчеты" в сам компонент TabNavigation */}
       <TabNavigation currentTab={tab} onTabChange={setTab} />
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <MainContent
-          tab={tab}
-          cashiersProps={{
-            email,
-            password,
-            cashiers,
-            loadingCashiers,
-            cashierMessage,
-            isLoadingCashierAction,
-            searchTermCashiers,
-            setEmail,
-            setPassword,
-            setSearchTermCashiers,
-            handleCreateCashier,
-            openEditCashierModal: (cashier) => {
-              setEditingCashier(cashier);
-              setIsCashierEditModalOpen(true);
-            },
-            handleDeleteCashier: (id: string) => {
-              const foundCashier = cashiers.find((cashier) => cashier.id === id);
-              if (foundCashier) {
-                setCashierToDelete(foundCashier);
-                setDeleteConfirmOpen(true);
-              }
-            },
-          }}
-          productsProps={{
-            products,
-            setProducts,
-            loadingProducts,
-            productMessage,
-            isLoadingProductAction,
-            productName,
-            productPurchasePrice,
-            productSalePrice,
-            productImage,
-            productQuantity,
-            searchTermProducts,
-            editingProduct, // Передаем editingProduct
-            selectedStores,
-            stores,
-            setProductName,
-            setProductPurchasePrice,
-            setProductSalePrice,
-            setProductImage,
-            setProductQuantity,
-            setSearchTermProducts,
-            setSelectedStores,
-            handleProductSubmit,
-            handleEditProduct, // Передаем handleEditProduct
-            handleDeleteProduct,
-            resetProductForm,
-          }}
-          storesProps={{
-            storeName,
-            storeAddress,
-            selectedCashiers: selectedCashiersForStore,
-            stores,
-            cashiers,
-            loadingStores,
-            storeMessage,
-            isLoadingStoreAction,
-            editStore,
-            searchTermStores,
-            setStoreName,
-            setStoreAddress,
-            setSelectedCashiers: setSelectedCashiersForStore,
-            setSearchTermStores,
-            handleStoreSubmit,
-            handleEditStore,
-            handleDeleteStore,
-            resetStoreForm,
-            setStoreMessage,
-          }}
-        />
+        {/* Условный рендеринг для отображения секции отчетов */}
+        {tab === 'reports' ? (
+          <ReportsSection />
+        ) : (
+          <MainContent
+            tab={tab}
+            cashiersProps={{
+              email,
+              password,
+              cashiers,
+              loadingCashiers,
+              cashierMessage,
+              isLoadingCashierAction,
+              searchTermCashiers,
+              setEmail,
+              setPassword,
+              setSearchTermCashiers,
+              handleCreateCashier,
+              openEditCashierModal: (cashier) => {
+                setEditingCashier(cashier);
+                setIsCashierEditModalOpen(true);
+              },
+              handleDeleteCashier: (id: string) => {
+                const foundCashier = cashiers.find((cashier) => cashier.id === id);
+                if (foundCashier) {
+                  setCashierToDelete(foundCashier);
+                  setDeleteConfirmOpen(true);
+                }
+              },
+            }}
+            productsProps={{
+              products,
+              setProducts,
+              loadingProducts,
+              productMessage,
+              isLoadingProductAction,
+              productName,
+              productPurchasePrice,
+              productSalePrice,
+              productImage,
+              productQuantity,
+              searchTermProducts,
+              editingProduct, // Передаем editingProduct
+              selectedStores,
+              stores,
+              setProductName,
+              setProductPurchasePrice,
+              setProductSalePrice,
+              setProductImage,
+              setProductQuantity,
+              setSearchTermProducts,
+              setSelectedStores,
+              handleProductSubmit,
+              handleEditProduct, // Передаем handleEditProduct
+              handleDeleteProduct,
+              resetProductForm,
+            }}
+            storesProps={{
+              storeName,
+              storeAddress,
+              selectedCashiers: selectedCashiersForStore,
+              stores,
+              cashiers,
+              loadingStores,
+              storeMessage,
+              isLoadingStoreAction,
+              editStore,
+              searchTermStores,
+              setStoreName,
+              setStoreAddress,
+              setSelectedCashiers: setSelectedCashiersForStore,
+              setSearchTermStores,
+              handleStoreSubmit,
+              handleEditStore,
+              handleDeleteStore,
+              resetStoreForm,
+              setStoreMessage,
+            }}
+          />
+        )}
       </main>
       <Footer />
 

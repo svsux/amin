@@ -9,18 +9,19 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String         @id @default(cuid())
+  email         String         @unique
   passwordHash  String
-  role          UserRole  @default(USER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          UserRole       @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   name          String?
   emailVerified DateTime?
   image         String?
   accounts      Account[]
   sessions      Session[]
   storeCashiers StoreCashier[]
+  shifts        Shift[] // Добавлена связь со сменами
 }
 
 enum UserRole {
@@ -65,39 +66,77 @@ model VerificationToken {
 }
 
 model Product {
-  id             String   @id @default(uuid())
-  name           String
-  purchasePrice  Float
-  salePrice      Float
-  imageUrl       String?
-  quantity       Int
-  createdAt      DateTime @default(now())
-  storeProducts  StoreProduct[]
+  id              String            @id @default(uuid())
+  name            String
+  purchasePrice   Float
+  salePrice       Float
+  imageUrl        String?
+  quantity        Int
+  createdAt       DateTime          @default(now())
+  storeProducts   StoreProduct[]
+  transactionItems TransactionItem[] // Добавлена связь с товарами в транзакциях
 }
 
 model Store {
-  id        String    @id @default(uuid())
+  id        String         @id @default(uuid())
   name      String
   address   String
   cashiers  StoreCashier[]
   products  StoreProduct[]
-  createdAt DateTime   @default(now())
+  createdAt DateTime       @default(now())
+  shifts    Shift[] // Добавлена связь со сменами
 }
 
 model StoreCashier {
-  id        String   @id @default(uuid())
-  store     Store    @relation(fields: [storeId], references: [id])
+  id        String @id @default(uuid())
+  store     Store  @relation(fields: [storeId], references: [id])
   storeId   String
-  cashier   User     @relation(fields: [cashierId], references: [id])
+  cashier   User   @relation(fields: [cashierId], references: [id])
   cashierId String
 }
 
 model StoreProduct {
-  id        String   @id @default(uuid())
-  store     Store    @relation(fields: [storeId], references: [id])
+  id        String  @id @default(uuid())
+  store     Store   @relation(fields: [storeId], references: [id])
   storeId   String
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
   productId String
 
   @@unique([storeId, productId])
+}
+
+// НОВАЯ МОДЕЛЬ: Смена
+model Shift {
+  id           String        @id @default(uuid())
+  cashierId    String
+  cashier      User          @relation(fields: [cashierId], references: [id])
+  storeId      String
+  store        Store         @relation(fields: [storeId], references: [id])
+  openedAt     DateTime      @default(now())
+  closedAt     DateTime?
+  transactions Transaction[]
+}
+
+// НОВАЯ МОДЕЛЬ: Транзакция
+model Transaction {
+  id            String            @id @default(uuid())
+  shiftId       String
+  shift         Shift             @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  total         Float
+  paymentMethod String // "card" или "qr"
+  createdAt     DateTime          @default(now())
+  items         TransactionItem[]
+}
+
+// НОВАЯ МОДЕЛЬ: Товары в транзакции
+model TransactionItem {
+  id            String      @id @default(uuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id])
+  quantity      Int
+  priceAtSale   Float // Цена на момент продажи
+
+  @@unique([transactionId, productId])
 }
