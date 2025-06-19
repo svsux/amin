@@ -1,164 +1,177 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, FormEvent } from "react";
 import Alert from "../components/Alert";
 import InputField from "../components/InputField";
 import PrimaryButton from "../components/PrimaryButton";
-import { FiUser, FiPlus, FiUsers, FiSearch, FiEdit, FiTrash, FiHome } from "react-icons/fi";
-import type { Cashier } from "../types";
+import ConfirmDialog from "../components/ConfirmDialog";
+import CashierEditModal from "../components/CashierEditModal";
+import { FiPlus, FiUsers, FiSearch, FiEdit, FiTrash, FiHome } from "react-icons/fi";
+import type { Cashier, AlertMessage } from "../types";
 
-interface Props {
-  email: string;
-  password: string;
-  cashiers: Cashier[];
-  loadingCashiers: boolean;
-  cashierMessage: { text: string | null; type: "success" | "error" | "info" } | null;
-  isLoadingCashierAction: boolean;
-  searchTermCashiers: string;
-  setEmail: (v: string) => void;
-  setPassword: (v: string) => void;
-  setSearchTermCashiers: (v: string) => void;
-  handleCreateCashier: (e: React.FormEvent<HTMLFormElement>) => void;
-  handleDeleteCashier: (id: string) => void; // Исправьте тип здесь!
-  openEditCashierModal: (cashier: Cashier) => void;
-}
+export default function CashiersSection() {
+  // --- Состояния, перенесенные из page.tsx ---
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [cashiers, setCashiers] = useState<Cashier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState<AlertMessage | null>(null);
+  const [isLoadingAction, setIsLoadingAction] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [editingCashier, setEditingCashier] = useState<Cashier | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [cashierToDelete, setCashierToDelete] = useState<Cashier | null>(null);
 
-const CashiersSection: React.FC<Props> = ({
-  email,
-  password,
-  cashiers,
-  loadingCashiers,
-  cashierMessage,
-  isLoadingCashierAction,
-  searchTermCashiers,
-  setEmail,
-  setPassword,
-  setSearchTermCashiers,
-  handleCreateCashier,
-  handleDeleteCashier,
-  openEditCashierModal,
-}) => {
-  const filteredCashiers = cashiers.filter((cashier) =>
-    cashier.email.toLowerCase().includes(searchTermCashiers.toLowerCase())
+  // --- Загрузка данных ---
+  const fetchCashiers = async () => {
+    setLoading(true);
+    try {
+      // ИЗМЕНЕНО: Добавлена опция { cache: "no-store" } для отключения кэширования
+      const res = await fetch("/api/admin/cashiers", { cache: "no-store" });
+      if (!res.ok) throw new Error("Не удалось загрузить кассиров");
+      const data = await res.json();
+      setCashiers(data.cashiers || []);
+    } catch (err) {
+      setMessage({ text: (err as Error).message, type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCashiers();
+  }, []);
+
+  // --- Логика (Handlers), перенесенная из page.tsx ---
+  const handleCreateCashier = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoadingAction(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/admin/create-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, role: "CASHIER" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      setMessage({ text: "Кассир успешно создан!", type: "success" });
+      setEmail("");
+      setPassword("");
+      fetchCashiers(); // Обновляем список
+    } catch (err) {
+      setMessage({ text: (err as Error).message, type: "error" });
+    } finally {
+      setIsLoadingAction(false);
+    }
+  };
+
+  const executeDeleteCashier = async () => {
+    if (!cashierToDelete) return;
+    setIsLoadingAction(true);
+    try {
+      const res = await fetch(`/api/admin/cashiers/${cashierToDelete.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message);
+      }
+      setMessage({ text: "Кассир успешно удален.", type: "success" });
+      fetchCashiers(); // Обновляем список
+    } catch (err) {
+      setMessage({ text: (err as Error).message, type: "error" });
+    } finally {
+      setIsLoadingAction(false);
+      setCashierToDelete(null);
+    }
+  };
+
+  const handleSaveCashier = async (updatedCashier: Cashier) => {
+    setIsLoadingAction(true);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/admin/cashiers/${updatedCashier.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedCashier),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      setMessage({ text: "Данные кассира обновлены.", type: "success" });
+      setIsEditModalOpen(false);
+      
+      // ИЗМЕНЕНО: Добавлено ключевое слово 'await'
+      await fetchCashiers(); // Дожидаемся полного обновления списка
+
+    } catch (err) {
+      setMessage({ text: (err as Error).message, type: "error" });
+    } finally {
+      setIsLoadingAction(false);
+    }
+  };
+
+  const filteredCashiers = cashiers.filter((c) =>
+    c.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <section className="space-y-10">
-      {/* Форма создания кассира */}
-      <div className="bg-[#121418]/80 backdrop-blur-md border border-[#1E2228] shadow-xl rounded-2xl p-8 transition-all">
-        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-          <FiPlus className="text-[#0066FF]" />
-          Добавить нового кассира
-        </h2>
-        {cashierMessage?.text && (
-          <Alert message={cashierMessage.text} type={cashierMessage.type || "info"} />
-        )}
-        <form onSubmit={handleCreateCashier} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <InputField
-              label="Email кассира"
-              id="cashier-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="kassir@example.com"
-            />
-            <InputField
-              label="Пароль"
-              id="cashier-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-            />
-          </div>
-          <div className="pt-1">
-            <PrimaryButton
-              type="submit"
-              disabled={isLoadingCashierAction}
-              className="w-full"
-            >
-              {isLoadingCashierAction ? "Создание..." : "Создать кассира"}
+    <>
+      <section className="space-y-10">
+        {/* Форма создания */}
+        <div className="bg-[#121418]/80 backdrop-blur-md border border-[#1E2228] shadow-xl rounded-2xl p-8">
+          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+            <FiPlus className="text-[#0066FF]" /> Добавить нового кассира
+          </h2>
+          <form onSubmit={handleCreateCashier} className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <InputField label="Email кассира" id="cashier-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <InputField label="Пароль" id="cashier-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </div>
+            <PrimaryButton type="submit" disabled={isLoadingAction} className="w-full">
+              {isLoadingAction ? "Создание..." : "Создать кассира"}
             </PrimaryButton>
-          </div>
-        </form>
-      </div>
-
-      {/* Список кассиров */}
-      <div className="bg-[#121418]/80 backdrop-blur-md border border-[#1E2228] shadow-xl rounded-2xl p-8 transition-all">
-        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-          <FiUsers className="text-[#0066FF]" />
-          Список кассиров
-        </h2>
-        <div className="mb-6 relative">
-          <InputField
-            label="Поиск по Email"
-            id="search-cashier"
-            type="search"
-            value={searchTermCashiers}
-            onChange={(e) => setSearchTermCashiers(e.target.value)}
-            placeholder="Введите email..."
-            icon={<FiSearch className="w-5 h-5 text-gray-400" />}
-          />
+          </form>
         </div>
-        {loadingCashiers ? (
-          <p className="text-[#A0A8B8] text-center py-4">Загрузка кассиров...</p>
-        ) : filteredCashiers.length === 0 ? (
-          <p className="text-[#A0A8B8] text-center py-4">
-            Кассиры не найдены.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredCashiers.map((cashier) => (
-              <div key={cashier.id} className="bg-[#0F1115] rounded-2xl border border-[#1E2228] p-6 flex flex-col justify-between transition-all duration-300 hover:border-[#0066FF]/60 hover:shadow-lg hover:shadow-[#0066FF]/10">
-                <div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 bg-[#0066FF]/10 p-3 rounded-full">
-                      <FiUser className="w-6 h-6 text-[#0066FF]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg text-white truncate">{cashier.email}</h3>
-                      <p className="text-sm text-[#A0A8B8]">
-                        ID: <span className="font-mono text-xs truncate block">{cashier.id}</span>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-6 space-y-3">
-                    <div className="flex items-center gap-3 text-sm">
+
+        {/* Список кассиров */}
+        <div className="bg-[#121418]/80 backdrop-blur-md border border-[#1E2228] shadow-xl rounded-2xl p-8">
+          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+            <FiUsers className="text-[#0066FF]" /> Список кассиров
+          </h2>
+          <InputField label="Поиск по Email" id="search-cashier" type="search" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} icon={<FiSearch />} />
+
+          {loading ? <p className="text-center py-4">Загрузка...</p> : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
+              {filteredCashiers.map((cashier) => (
+                <div key={cashier.id} className="bg-[#0F1115] rounded-2xl border border-[#1E2228] p-6 flex flex-col justify-between">
+                  <div>
+                    <h3 className="font-semibold text-lg text-white truncate">{cashier.email}</h3>
+                    <div className="flex items-center gap-3 text-sm mt-4">
                       <FiHome className="w-5 h-5 text-[#0066FF]" />
                       <span className="text-[#A0A8B8]">Назначен в магазины:</span>
-                      {/* ИСПРАВЛЕНО: Используем правильное поле 'storeCashiers' */}
                       <span className="font-semibold text-white">{cashier.storeCashiers?.length || 0}</span>
                     </div>
                   </div>
+                  <div className="flex items-center gap-3 pt-4 mt-6 border-t border-[#1E2228]">
+                    <button onClick={() => { setEditingCashier(cashier); setIsEditModalOpen(true); }} className="flex-1 inline-flex justify-center items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0066FF]/10 rounded-md hover:bg-[#0066FF]/20">
+                      <FiEdit /> Изменить
+                    </button>
+                    <button onClick={() => setCashierToDelete(cashier)} className="p-2 text-[#FF3B30] hover:bg-[#FF3B30]/20 rounded-md">
+                      <FiTrash />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 pt-4 mt-6 border-t border-[#1E2228]">
-                  <button
-                    onClick={() => openEditCashierModal(cashier)}
-                    disabled={isLoadingCashierAction}
-                    className="flex-1 inline-flex justify-center items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0066FF]/10 border border-transparent rounded-md hover:bg-[#0066FF]/20 transition-colors disabled:opacity-50"
-                  >
-                    <FiEdit />
-                    Изменить
-                  </button>
-                  <button
-                    onClick={() => handleDeleteCashier(cashier.id)}
-                    disabled={isLoadingCashierAction}
-                    className="p-2 text-[#FF3B30] hover:bg-[#FF3B30]/20 rounded-md transition-colors disabled:opacity-50"
-                    title="Удалить кассира"
-                  >
-                    <FiTrash />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-};
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
-export default CashiersSection;
+      {/* Модальные окна */}
+      {message?.text && <Alert message={message.text} type={message.type} onClose={() => setMessage(null)} />}
+      <CashierEditModal cashier={editingCashier} open={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} onSave={handleSaveCashier} isLoading={isLoadingAction} />
+      <ConfirmDialog open={!!cashierToDelete} message={`Удалить кассира ${cashierToDelete?.email}?`} onConfirm={executeDeleteCashier} onCancel={() => setCashierToDelete(null)} />
+    </>
+  );
+}

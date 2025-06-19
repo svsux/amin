@@ -5,89 +5,72 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
 import bcrypt from "bcrypt";
 
-// Удаление кассира
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+// --- ИСПРАВЛЕННАЯ ФУНКЦИЯ PATCH ---
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
-    const { id } = params;
-
-    console.log("Server: ID кассира для удаления:", id);
-
     const session = await getServerSession(authOptions);
-
     if (!session || session.user?.role !== "ADMIN") {
-      console.error("Server: Доступ запрещен");
       return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
     }
 
-    const cashier = await prisma.user.findUnique({ where: { id } });
+    // ИЗМЕНЕНО: Получаем ID правильным способом
+    const cashierId = params.id;
+    const body = await req.json();
+    const { email, password } = body;
 
-    console.log("Server: Найденный кассир:", cashier);
+    const updateData: { email?: string; passwordHash?: string } = {};
 
-    if (!cashier || cashier.role !== "CASHIER") {
-      console.error("Server: Кассир не найден или не является кассиром");
-      return NextResponse.json({ message: "Кассир не найден" }, { status: 404 });
+    if (email) {
+      updateData.email = email;
     }
 
-    const linkedStores = await prisma.storeCashier.findMany({ where: { cashierId: id } });
-
-    if (linkedStores.length > 0) {
-      console.error("Server: Кассир связан с магазинами");
-      return NextResponse.json(
-        { message: "Невозможно удалить кассира, так как он связан с магазинами. Отвяжите кассира от магазинов перед удалением." },
-        { status: 409 }
-      );
+    if (password && password.trim().length > 0) {
+      updateData.passwordHash = await bcrypt.hash(password, 10);
     }
 
-    await prisma.user.delete({ where: { id } });
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ message: "Нет данных для обновления" }, { status: 400 });
+    }
 
-    console.log("Server: Кассир успешно удалён");
-    return NextResponse.json({ message: "Кассир успешно удалён" });
-  } catch (error) {
-    const err = error as Error;
-    console.error("Ошибка при удалении кассира:", err);
-    return NextResponse.json(
-      { message: "Ошибка сервера", details: err.message || "Неизвестная ошибка" },
-      { status: 500 }
-    );
+    await prisma.user.update({
+      where: { id: cashierId, role: "CASHIER" },
+      data: updateData,
+    });
+
+    return NextResponse.json({ message: "Данные кассира обновлены" });
+  } catch (error: any) {
+    console.error("Ошибка при обновлении кассира:", error);
+    if (error.code === 'P2025') {
+      return NextResponse.json({ message: "Кассир не найден." }, { status: 404 });
+    }
+    if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
+        return NextResponse.json({ message: "Пользователь с таким email уже существует." }, { status: 409 });
+    }
+    return NextResponse.json({ message: "Ошибка сервера при обновлении кассира" }, { status: 500 });
   }
 }
 
-// Обновление кассира
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+// --- ИСПРАВЛЕННАЯ ФУНКЦИЯ DELETE ---
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
-    const { id } = params;
     const session = await getServerSession(authOptions);
-
     if (!session || session.user?.role !== "ADMIN") {
       return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { email, password } = body;
+    // ИЗМЕНЕНО: Получаем ID правильным способом
+    const cashierId = params.id;
 
-    const updatedData: { email?: string; passwordHash?: string } = {};
-    if (email) updatedData.email = email;
-    if (password) updatedData.passwordHash = await bcrypt.hash(password, 10);
-
-    const cashier = await prisma.user.findUnique({ where: { id } });
-    if (!cashier || cashier.role !== "CASHIER") {
-      return NextResponse.json({ message: "Кассир не найден" }, { status: 404 });
-    }
-
-    const updatedCashier = await prisma.user.update({
-      where: { id },
-      data: updatedData,
+    await prisma.user.delete({
+      where: { id: cashierId },
     });
 
-    return NextResponse.json({ cashier: updatedCashier });
-  } catch (error) {
-    console.error("Ошибка при обновлении кассира:", error);
-    return NextResponse.json({ message: "Ошибка сервера" }, { status: 500 });
+    return NextResponse.json({ message: "Кассир и все его связи успешно удалены" });
+  } catch (error: any) {
+    console.error("Ошибка при удалении кассира:", error);
+    if (error.code === 'P2025') {
+       return NextResponse.json({ message: "Кассир не найден." }, { status: 404 });
+    }
+    return NextResponse.json({ message: "Ошибка сервера при удалении кассира" }, { status: 500 });
   }
 }

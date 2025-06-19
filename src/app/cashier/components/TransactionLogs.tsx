@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { FiCreditCard, FiDollarSign } from "react-icons/fi";
 
 interface Transaction {
   id: string;
@@ -12,75 +13,73 @@ interface Transaction {
 
 interface Props {
   isShiftOpen: boolean;
-  dataVersion: number; // Добавляем новый проп
+  dataVersion: number;
 }
 
 const TransactionLogs: React.FC<Props> = ({ isShiftOpen, dataVersion }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch("/api/cashier/transactions/logs");
-        if (!response.ok) {
-          throw new Error("Не удалось загрузить логи транзакций.");
-        }
-        const data: Transaction[] = await response.json();
-        setTransactions(data);
-      } catch (err) {
-        setError((err as Error).message || "Ошибка при загрузке логов транзакций.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (isShiftOpen) {
-      fetchTransactions();
+      setLoading(true);
+      fetch("/api/cashier/transactions/logs")
+        .then((res) => res.json())
+        .then((data: Transaction[]) => setTransactions(data))
+        .catch((err) => console.error(err))
+        .finally(() => setLoading(false));
     } else {
-      setTransactions([]); // Очищаем логи, если смена закрыта
+      setTransactions([]);
     }
-  }, [isShiftOpen, dataVersion]); // Обновляем логи при изменении статуса смены или по триггеру
+  }, [isShiftOpen, dataVersion]);
 
   return (
-    <div className="bg-transparent p-0 rounded-lg shadow-none space-y-4 relative text-white">
-      {!isShiftOpen && transactions.length === 0 && (
-         <div className="absolute inset-0 bg-[#181B20] bg-opacity-90 flex justify-center items-center z-10 rounded-lg">
-          <p className="text-lg font-bold text-gray-400">Смена закрыта</p>
-        </div>
-      )}
-      <h2 className="text-xl font-bold text-white">История операций</h2>
-      
-      {loading && <div className="text-gray-400 text-sm">Загрузка логов...</div>}
-      {error && <div className="text-red-400 text-sm">Ошибка: {error}</div>}
-      
-      {!loading && !error && (
-        <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
+    <div className="bg-[#181B20] p-6 rounded-xl border border-[#23262B]">
+      <h2 className="text-2xl font-bold text-white mb-4">История операций</h2>
+
+      {loading && <div className="text-gray-400 text-sm">Загрузка...</div>}
+
+      {!loading && (
+        <div
+          className="space-y-3 overflow-y-auto pr-2"
+          style={{ maxHeight: "calc(100vh - 200px)" }}
+        >
           {transactions.length === 0 ? (
-            <p className="text-gray-400 text-sm">Операций пока не было.</p>
+            <p className="text-gray-500 text-sm text-center pt-10">
+              Операций пока не было.
+            </p>
           ) : (
-            transactions.map((transaction) => (
-              <li key={transaction.id} className="border-b border-[#23262B] pb-3">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-bold text-indigo-400">{transaction.total.toFixed(2)}₽</span>
-                  <span className="text-xs text-gray-400">{new Date(transaction.createdAt).toLocaleString()}</span>
-                </div>
-                <p className="text-sm text-gray-300">
-                  Оплата: {transaction.paymentMethod === "card" ? "Карта" : "Наличные"}
-                </p>
-                <ul className="pl-4 mt-1 text-xs text-gray-400 list-disc list-inside">
-                  {transaction.products.map((product, index) => (
-                    <li key={index}>
-                      {product.name} x {product.quantity}
+            transactions.map((tx) => (
+              <details
+                key={tx.id}
+                className="bg-[#23262B] p-3 rounded-lg cursor-pointer transition hover:bg-[#2a2e37]"
+              >
+                <summary className="flex justify-between items-center list-none">
+                  <div className="flex items-center gap-3">
+                    {tx.paymentMethod === "card" ? (
+                      <FiCreditCard className="text-indigo-400" />
+                    ) : (
+                      <FiDollarSign className="text-green-400" />
+                    )}
+                    <span className="font-bold text-white text-lg">
+                      {tx.total.toFixed(2)}₽
+                    </span>
+                  </div>
+                  <span className="text-xs text-gray-400">
+                    {new Date(tx.createdAt).toLocaleTimeString()}
+                  </span>
+                </summary>
+                <ul className="pl-4 mt-2 pt-2 border-t border-gray-700 text-xs text-gray-400 list-disc list-inside">
+                  {tx.products.map((p, i) => (
+                    <li key={i}>
+                      {p.name} x {p.quantity}
                     </li>
                   ))}
                 </ul>
-              </li>
+              </details>
             ))
           )}
-        </ul>
+        </div>
       )}
     </div>
   );

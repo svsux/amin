@@ -13,7 +13,7 @@ export async function GET() {
   const openShift = await prisma.shift.findFirst({
     where: {
       cashierId: session.user.id,
-      closedAt: null,
+      closedAt: null, // ИСПРАВЛЕНО: Используем 'closedAt'
     },
   });
 

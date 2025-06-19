@@ -6,47 +6,34 @@ import { authOptions } from "@/lib/authOptions";
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session || session.user?.role !== "CASHIER") {
-      return NextResponse.json({ message: "Доступ запрещен." }, { status: 403 });
+    if (!session?.user?.id || session.user.role !== "CASHIER") {
+      return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
     }
 
-    const cashierId = session.user.id;
-
-    const storeCashierLink = await prisma.storeCashier.findFirst({
-      where: { cashierId },
+    // ИСПРАВЛЕНО: Ищем активную смену, чтобы точно знать магазин
+    const activeShift = await prisma.shift.findFirst({
+      where: { cashierId: session.user.id, closedAt: null },
     });
 
-    if (!storeCashierLink) {
-      return NextResponse.json(
-        { message: "Кассир не привязан к магазину." },
-        { status: 404 }
-      );
+    // Если смена не открыта, товаров для продажи нет. Возвращаем пустой массив.
+    if (!activeShift) {
+      return NextResponse.json([]);
     }
 
-    const storeId = storeCashierLink.storeId;
-
     const storeProducts = await prisma.storeProduct.findMany({
-      where: { storeId },
+      where: { storeId: activeShift.storeId }, // Берем ID магазина из активной смены
       include: {
-        product: {
-          select: {
-            id: true,
-            name: true,
-            salePrice: true,
-            quantity: true,
-            imageUrl: true, // Добавляем URL изображения
-          },
-        },
+        product: true,
       },
     });
 
-    const formattedProducts = storeProducts.map((p) => ({
-      id: p.product.id,
-      name: p.product.name,
-      price: p.product.salePrice,
-      quantity: p.product.quantity,
-      imageUrl: p.product.imageUrl, // Передаем URL изображения
+    // Форматируем данные для кассового аппарата
+    const formattedProducts = storeProducts.map((sp) => ({
+      id: sp.product.id,
+      name: sp.product.name,
+      price: sp.product.salePrice,
+      quantity: sp.product.quantity,
+      imageUrl: sp.product.imageUrl,
     }));
 
     return NextResponse.json(formattedProducts);

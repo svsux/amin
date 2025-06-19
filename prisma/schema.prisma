@@ -88,18 +88,21 @@ model Store {
 }
 
 model StoreCashier {
-  id        String @id @default(uuid())
-  store     Store  @relation(fields: [storeId], references: [id])
-  storeId   String
-  cashier   User   @relation(fields: [cashierId], references: [id])
-  cashierId String
+  id         String @id @default(uuid())
+  store      Store  @relation(fields: [storeId], references: [id], onDelete: Cascade) // <-- ИЗМЕНЕНО
+  storeId    String
+  cashier    User   @relation(fields: [cashierId], references: [id], onDelete: Cascade) // <-- ИЗМЕНЕНО
+  cashierId  String
+  assignedBy String
+
+  @@unique([storeId, cashierId])
 }
 
 model StoreProduct {
   id        String  @id @default(uuid())
-  store     Store   @relation(fields: [storeId], references: [id])
+  store     Store   @relation(fields: [storeId], references: [id], onDelete: Cascade) // <-- ИЗМЕНЕНО
   storeId   String
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade) // <-- ИЗМЕНЕНО
   productId String
 
   @@unique([storeId, productId])

@@ -1,108 +1,108 @@
-import { useState, useEffect } from "react";
+"use client";
+
+import React, { useState, useEffect, FormEvent } from "react";
+import { FiX } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
 import InputField from "./InputField";
 import PrimaryButton from "./PrimaryButton";
-import { motion } from "framer-motion";
+import type { Cashier } from "../types";
 
-interface Cashier {
-  id: string;
-  email: string;
+interface Props {
+  open: boolean;
+  cashier: Cashier | null;
+  onClose: () => void;
+  onSave: (data: { id: string; email: string; password?: string }) => void;
+  isLoading: boolean;
 }
 
 export default function CashierEditModal({
-  cashier,
   open,
+  cashier,
   onClose,
   onSave,
   isLoading,
-}: {
-  cashier: Cashier | null;
-  open: boolean;
-  onClose: () => void;
-  onSave: (updated: { email: string; password?: string }) => void;
-  isLoading: boolean;
-}) {
-  const [editedEmail, setEditedEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
+}: Props) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
-    if (open && cashier) {
-      setEditedEmail(cashier.email);
-      setNewPassword("");
+    if (cashier) {
+      setEmail(cashier.email);
+      setPassword("");
     }
-  }, [cashier, open]);
+  }, [cashier]);
 
-  if (!open || !cashier) return null;
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!cashier) return;
+    onSave({
+      id: cashier.id,
+      email: email,
+      password: password,
+    });
+  };
 
-  const handleSaveClick = () => {
-    if (!editedEmail.trim()) {
-      // Можно заменить на более красивое уведомление в будущем
-      alert("Email не может быть пустым.");
-      return;
-    }
-    onSave({ email: editedEmail, password: newPassword || undefined });
+  const backdropVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+  };
+
+  const modalVariants = {
+    hidden: { opacity: 0, y: 30, scale: 0.95 },
+    visible: { opacity: 1, y: 0, scale: 1 },
+    exit: { opacity: 0, y: 30, scale: 0.95 },
   };
 
   return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      <motion.div
-        className="bg-[#121418] rounded-lg shadow-xl p-6 w-full max-w-md relative border border-[#1E2228]"
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        transition={{ duration: 0.2, delay: 0.05 }}
-      >
-        <button
-          className="absolute top-3 right-3 text-[#A0A8B8] hover:text-white text-2xl transition-colors"
+    <AnimatePresence>
+      {open && cashier && (
+        <motion.div
+          className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4"
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+          variants={backdropVariants}
+          transition={{ duration: 0.2 }}
           onClick={onClose}
-          aria-label="Закрыть"
         >
-          &times;
-        </button>
-        <h3 className="text-lg font-semibold mb-4 text-white">Редактировать кассира</h3>
-        <div className="space-y-4">
-          <InputField
-            label="Email"
-            id="edit-cashier-email"
-            type="email"
-            value={editedEmail}
-            onChange={(e: any) => setEditedEmail(e.target.value)}
-            required
-          />
-          <InputField
-            label="Новый пароль (необязательно)"
-            id="edit-cashier-password"
-            type="password"
-            value={newPassword}
-            onChange={(e: any) => setNewPassword(e.target.value)}
-            minLength={6}
-            placeholder="Оставьте пустым, чтобы не менять"
-          />
-        </div>
-        <div className="flex gap-3 mt-6">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isLoading}
-            className="flex-1 py-2.5 px-4 border border-[#1E2228] rounded-md shadow-sm text-sm font-semibold text-[#A0A8B8] hover:bg-[#1E2228] transition-colors disabled:opacity-50"
+          <motion.div
+            className="bg-[#121418] border border-[#1E2228] rounded-2xl shadow-xl w-full max-w-md p-8 relative"
+            variants={modalVariants}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            onClick={(e) => e.stopPropagation()}
           >
-            Отмена
-          </button>
-          <PrimaryButton
-            type="button"
-            onClick={handleSaveClick}
-            className="flex-1"
-            disabled={isLoading}
-          >
-            {isLoading ? "Сохранение..." : "Сохранить"}
-          </PrimaryButton>
-        </div>
-      </motion.div>
-    </motion.div>
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+            >
+              <FiX size={24} />
+            </button>
+            <h2 className="text-2xl font-bold text-white mb-6">
+              Редактировать кассира
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <InputField
+                label="Email кассира"
+                id="edit-cashier-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <InputField
+                label="Новый пароль (оставьте пустым, чтобы не менять)"
+                id="edit-cashier-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <PrimaryButton type="submit" disabled={isLoading} className="w-full">
+                {isLoading ? "Сохранение..." : "Сохранить изменения"}
+              </PrimaryButton>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

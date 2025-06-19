@@ -1,218 +1,189 @@
-import React, { useState, useEffect, useRef } from "react";
+"use client";
+
+import React, { useState, useEffect, FormEvent } from "react";
+import { FiX } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
 import InputField from "./InputField";
 import PrimaryButton from "./PrimaryButton";
 import AnimatedSelect from "./AnimatedSelect";
-import { Product } from "../types";
-import { motion } from "framer-motion";
-import Image from "next/image";
-
-type StoreOption = { label: string; value: string };
+import type { Product, Store, Option } from "../types";
 
 interface Props {
-  isOpen: boolean;
+  open: boolean;
+  product: Product | null;
   onClose: () => void;
-  editingProduct: Product | null;
-  storeOptions: StoreOption[];
-  onSubmit: (updatedData: {
-    name: string;
-    purchasePrice: string;
-    salePrice: string;
-    quantity: string;
-    image: File | null;
-    stores: string[];
-  }) => void;
+  onSave: (productId: string, formData: FormData) => void;
   isLoading: boolean;
+  allStores: Store[];
 }
 
-const ProductEditModal: React.FC<Props> = ({
-  isOpen,
+export default function ProductEditModal({
+  open,
+  product,
   onClose,
-  editingProduct,
-  storeOptions,
-  onSubmit,
+  onSave,
   isLoading,
-}) => {
+  allStores,
+}: Props) {
   const [name, setName] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [salePrice, setSalePrice] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [currentImageUrl, setCurrentImageUrl] = useState("");
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
-  const [image, setImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen && editingProduct) {
-      setName(editingProduct.name);
-      setPurchasePrice(String(editingProduct.purchasePrice));
-      setSalePrice(String(editingProduct.salePrice));
-      setQuantity(String(editingProduct.quantity));
-      setSelectedStores(
-        editingProduct.storeProducts?.map((sp) => String(sp.store.id)) || []
-      );
-      setImage(null);
-      setImagePreview(editingProduct.imageUrl || null);
+    if (product) {
+      setName(product.name);
+      setPurchasePrice(String(product.purchasePrice));
+      setSalePrice(String(product.salePrice));
+      setQuantity(String(product.quantity));
+      setCurrentImageUrl(product.imageUrl || "");
+      setSelectedStores(product.storeProducts?.map((sp) => sp.store.id) || []);
+      setNewImageFile(null);
+      const fileInput = document.getElementById(
+        "edit-product-image"
+      ) as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
     }
-  }, [editingProduct, isOpen]);
+  }, [product]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setImage(file);
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setImagePreview(editingProduct?.imageUrl || null);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    onSubmit({
-      name,
-      purchasePrice,
-      salePrice,
-      quantity,
-      image,
-      stores: selectedStores,
-    });
+    if (!product) return;
+
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("purchasePrice", purchasePrice);
+    formData.append("salePrice", salePrice);
+    formData.append("quantity", quantity);
+    formData.append("stores", JSON.stringify(selectedStores));
+
+    if (newImageFile) {
+      formData.append("image", newImageFile);
+    }
+
+    onSave(product.id, formData);
   };
 
-  if (!isOpen) return null;
+  const storeOptions: Option[] = allStores.map((s) => ({
+    value: s.id,
+    label: s.name,
+  }));
+
+  const backdropVariants = { hidden: { opacity: 0 }, visible: { opacity: 1 } };
+  const modalVariants = {
+    hidden: { opacity: 0, y: 30, scale: 0.95 },
+    visible: { opacity: 1, y: 0, scale: 1 },
+    exit: { opacity: 0, y: 30, scale: 0.95 },
+  };
 
   return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      <motion.div
-        className="bg-[#121418] rounded-lg shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[#1E2228]"
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        transition={{ duration: 0.2, delay: 0.05 }}
-      >
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-white">
-            Редактировать товар
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-[#A0A8B8] hover:text-white text-2xl transition-colors"
+    <AnimatePresence>
+      {open && product && (
+        <motion.div
+          className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4"
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+          variants={backdropVariants}
+          transition={{ duration: 0.2 }}
+          onClick={onClose}
+        >
+          <motion.div
+            className="bg-[#121418] border border-[#1E2228] rounded-2xl shadow-xl w-full max-w-2xl p-8 relative"
+            variants={modalVariants}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            onClick={(e) => e.stopPropagation()}
           >
-            &times;
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <InputField
-            id="edit-product-name"
-            label="Название товара"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InputField
-              id="edit-product-purchase-price"
-              label="Закупочная цена (₽)"
-              type="number"
-              value={purchasePrice}
-              onChange={(e) => setPurchasePrice(e.target.value)}
-              required
-            />
-            <InputField
-              id="edit-product-sale-price"
-              label="Цена продажи (₽)"
-              type="number"
-              value={salePrice}
-              onChange={(e) => setSalePrice(e.target.value)}
-              required
-            />
-          </div>
-          <InputField
-            id="edit-product-quantity"
-            label="Количество на складе"
-            type="number"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            required
-          />
-
-          <div>
-            <label className="block text-sm font-medium text-[#A0A8B8] mb-1">
-              Магазины
-            </label>
-            <AnimatedSelect
-              isMulti
-              options={storeOptions}
-              value={storeOptions.filter((opt) =>
-                selectedStores.includes(opt.value)
-              )}
-              onChange={(opts) =>
-                setSelectedStores(opts ? opts.map((o) => o.value) : [])
-              }
-              placeholder="Выберите магазины"
-              classNamePrefix="react-select"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#A0A8B8] mb-1">
-              Изображение товара
-            </label>
-            <input
-              id="edit-product-image-input"
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              ref={fileInputRef}
-              className="hidden"
-            />
             <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="mb-2 px-4 py-2 text-sm font-medium text-white bg-[#0066FF] rounded-md shadow-sm hover:bg-blue-500 transition-colors"
+              onClick={onClose}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white"
             >
-              {imagePreview
-                ? "Изменить изображение"
-                : "Выбрать изображение"}
+              <FiX size={24} />
             </button>
-            {imagePreview && (
-              <div className="mt-2 border border-[#1E2228] rounded-md p-2 inline-block">
-                <Image
-                  src={imagePreview}
-                  alt="Предпросмотр"
-                  width={96}
-                  height={96}
-                  className="h-24 w-24 object-cover rounded"
+            <h2 className="text-2xl font-bold text-white mb-6">
+              Редактировать товар
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <InputField
+                  label="Название товара"
+                  id="edit-product-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+                <InputField
+                  label="Количество"
+                  id="edit-product-quantity"
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  required
+                />
+                <InputField
+                  label="Цена закупки"
+                  id="edit-product-purchase-price"
+                  type="number"
+                  step="0.01"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(e.target.value)}
+                  required
+                />
+                <InputField
+                  label="Цена продажи"
+                  id="edit-product-sale-price"
+                  type="number"
+                  step="0.01"
+                  value={salePrice}
+                  onChange={(e) => setSalePrice(e.target.value)}
+                  required
                 />
               </div>
-            )}
-          </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-md border border-[#1E2228] text-sm text-[#A0A8B8] hover:bg-[#1E2228] transition-colors"
-            >
-              Отмена
-            </button>
-            <PrimaryButton type="submit" disabled={isLoading}>
-              {isLoading ? "Сохранение..." : "Сохранить изменения"}
-            </PrimaryButton>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  Изображение товара
+                </label>
+                {currentImageUrl && !newImageFile && (
+                  <img
+                    src={currentImageUrl}
+                    alt={name}
+                    className="w-24 h-24 object-cover rounded-lg mb-2"
+                  />
+                )}
+                <input
+                  type="file"
+                  id="edit-product-image"
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setNewImageFile(e.target.files[0]);
+                    }
+                  }}
+                  className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#0066FF]/10 file:text-[#0066FF] hover:file:bg-[#0066FF]/20 cursor-pointer"
+                />
+                <p className="text-xs text-gray-500">
+                  Выберите новый файл, чтобы заменить текущее изображение.
+                </p>
+              </div>
+
+              <AnimatedSelect
+                isMulti
+                options={storeOptions}
+                value={storeOptions.filter((o) => selectedStores.includes(o.value))}
+                onChange={(opts) => setSelectedStores(opts ? opts.map((o) => o.value) : [])}
+                placeholder="Выберите магазины..."
+              />
+              <PrimaryButton type="submit" disabled={isLoading} className="w-full">
+                {isLoading ? "Сохранение..." : "Сохранить изменения"}
+              </PrimaryButton>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
-};
-
-export default ProductEditModal;
+}

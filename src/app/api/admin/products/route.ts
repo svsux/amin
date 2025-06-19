@@ -1,14 +1,15 @@
+import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
+import prisma from "@/lib/prisma";
 import { writeFile } from "fs/promises";
 import path from "path";
 
 // Отключаем кэширование
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user?.role !== "ADMIN") {
@@ -16,20 +17,15 @@ export async function GET() {
     }
 
     const products = await prisma.product.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        storeProducts: {
-          include: {
-            store: true,
-          },
-        },
+      orderBy: {
+        name: "asc",
       },
     });
-    // Возвращаем массив, а не объект
-    return NextResponse.json(products);
+
+    return NextResponse.json({ products });
   } catch (error) {
-    console.error("Ошибка при получении списка товаров:", error);
-    return NextResponse.json({ message: "Ошибка сервера" }, { status: 500 });
+    console.error("Ошибка при получении товаров:", error);
+    return NextResponse.json({ message: "Ошибка сервера при получении товаров" }, { status: 500 });
   }
 }
 
@@ -90,12 +86,12 @@ export async function POST(req: Request) {
 
     let imageUrl: string | undefined = undefined;
     if (image && image.size > 0) {
-      const bytes = await image.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const fileName = `${Date.now()}-${image.name.replace(/\s+/g, "_")}`;
-      const filePath = path.join(process.cwd(), "public", "uploads", fileName);
-      await writeFile(filePath, buffer);
-      imageUrl = `/uploads/${fileName}`;
+      // 1. Загружаем файл в Vercel Blob
+      const blob = await put(image.name, image, {
+        access: "public",
+      });
+      // 2. Получаем публичный URL загруженного файла
+      imageUrl = blob.url;
     }
 
     const product = await prisma.product.create({

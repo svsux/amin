@@ -5,86 +5,65 @@ import { authOptions } from "@/lib/authOptions";
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-
-  if (!session || session.user?.role !== "CASHIER") {
+  if (!session?.user?.id || session.user.role !== "CASHIER") {
     return NextResponse.json({ message: "Доступ запрещен." }, { status: 403 });
   }
 
-  const cashierId = session.user.id;
-  const body = await request.json();
-  const { products, total, paymentMethod } = body;
-
-  if (!products || !Array.isArray(products) || products.length === 0 || !total || !paymentMethod) {
-    return NextResponse.json({ message: "Некорректные данные запроса." }, { status: 400 });
-  }
-
   const openShift = await prisma.shift.findFirst({
-    where: { cashierId, closedAt: null },
+    where: { cashierId: session.user.id, closedAt: null },
   });
 
   if (!openShift) {
-    return NextResponse.json({ message: "Нет открытой смены для транзакции." }, { status: 403 });
+    return NextResponse.json({ message: "Смена не открыта. Продажа невозможна." }, { status: 400 });
   }
 
   try {
-    // Используем транзакцию Prisma для обеспечения целостности данных
-    const transactionResult = await prisma.$transaction(async (tx) => {
-      // 1. Проверяем наличие всех товаров на складе перед продажей
-      for (const item of products) {
-        const productInDb = await tx.product.findUnique({
-          where: { id: item.id },
-        });
+    const body = await request.json();
+    const { products, total, paymentMethod } = body;
 
-        if (!productInDb || productInDb.quantity < item.quantity) {
-          throw new Error(`Недостаточно товара на складе для: ${productInDb?.name || item.id}`);
+    if (!products || !Array.isArray(products) || products.length === 0 || !total || !paymentMethod) {
+      return NextResponse.json({ message: "Некорректные данные для транзакции." }, { status: 400 });
+    }
+
+    const transactionResult = await prisma.$transaction(async (tx) => {
+      for (const item of products) {
+        const updatedProduct = await tx.product.update({
+          where: { id: item.id },
+          data: { quantity: { decrement: item.quantity } },
+        });
+        if (updatedProduct.quantity < 0) {
+          throw new Error(`Недостаточно товара на складе для: ${updatedProduct.name}`);
         }
       }
 
-      // 2. Создаем запись о транзакции
       const newTransaction = await tx.transaction.create({
         data: {
           shiftId: openShift.id,
           total,
           paymentMethod,
-          items: {
-            create: products.map((product: { id: string; quantity: number; price: number }) => ({
-              productId: product.id,
-              quantity: product.quantity,
-              priceAtSale: product.price,
-            })),
-          },
         },
       });
 
-      // 3. Уменьшаем количество каждого проданного товара на складе
-      for (const item of products) {
-        await tx.product.update({
-          where: { id: item.id },
-          data: {
-            quantity: {
-              decrement: item.quantity,
-            },
-          },
-        });
-      }
+      // ИСПРАВЛЕНО: Используем 'priceAtSale' вместо 'price'
+      await tx.transactionItem.createMany({
+        data: products.map((p: { id: string; quantity: number; price: number }) => ({
+          transactionId: newTransaction.id,
+          productId: p.id,
+          quantity: p.quantity,
+          priceAtSale: p.price, // <--- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ
+        })),
+      });
 
       return newTransaction;
     });
 
     return NextResponse.json({
-      message: "Транзакция успешно завершена.",
+      message: "Оплата прошла успешно!",
       transactionId: transactionResult.id,
     });
   } catch (error) {
-    // Если произошла ошибка (например, нехватка товара), транзакция автоматически отменяется
-    console.error("Ошибка транзакции:", error);
     const errorMessage = error instanceof Error ? error.message : "Ошибка сервера при обработке транзакции.";
-
-    // Отправляем клиенту конкретную ошибку, если она связана с нехваткой товара
-    if (errorMessage.startsWith("Недостаточно товара")) {
-      return NextResponse.json({ message: errorMessage }, { status: 409 }); // 409 Conflict
-    }
-
-    return NextResponse.json({ message: "Ошибка сервера." }, { status: 500 });
+    console.error("Ошибка транзакции:", error);
+    return NextResponse.json({ message: errorMessage }, { status: 409 });
   }
 }

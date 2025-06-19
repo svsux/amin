@@ -1,24 +1,36 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
+import prisma from "@/lib/prisma";
 
-// ДОБАВЬТЕ ЭТУ СТРОКУ
-export const dynamic = 'force-dynamic';
-
-export async function GET() {
+// ЕДИНСТВЕННАЯ И ПРАВИЛЬНАЯ ФУНКЦИЯ GET
+export async function GET(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user?.role !== "ADMIN") {
+      return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 });
+    }
+
     const cashiers = await prisma.user.findMany({
       where: { role: "CASHIER" },
-      orderBy: { createdAt: "desc" },
       include: {
-        // ИСПРАВЛЕНО: Включаем промежуточную таблицу 'storeCashiers'
-        storeCashiers: true,
+        storeCashiers: {
+          select: {
+            storeId: true, // Это нужно для подсчета `storeCashiers.length` на фронте
+          },
+        },
+      },
+      orderBy: {
+        email: "asc",
       },
     });
-    return NextResponse.json(cashiers);
+
+    return NextResponse.json({ cashiers });
   } catch (error) {
     console.error("Ошибка при получении кассиров:", error);
-    return NextResponse.json({ message: "Ошибка сервера" }, { status: 500 });
+    return NextResponse.json({ message: "Ошибка сервера при получении кассиров" }, { status: 500 });
   }
 }
+
+// Здесь могут быть ваши другие функции, например PATCH или DELETE,
+// если они были в этом файле. Главное, что GET теперь только один.

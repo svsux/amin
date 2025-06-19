@@ -14,7 +14,7 @@ export async function POST() {
     const cashierId = session.user.id;
 
     const openShift = await prisma.shift.findFirst({
-      where: { cashierId, closedAt: null },
+      where: { cashierId, closedAt: null }, // ИСПРАВЛЕНО: Используем 'closedAt'
       include: {
         transactions: {
           include: {
@@ -34,10 +34,9 @@ export async function POST() {
       return NextResponse.json({ message: "Нет открытой смены для закрытия." }, { status: 404 });
     }
 
-    // Собираем данные для отчета
     let totalSales = 0;
     let totalCardSales = 0;
-    let totalQrSales = 0; // 'qr' используется для наличных
+    let totalQrSales = 0;
     const soldProductsMap = new Map<string, { name: string; quantity: number }>();
 
     for (const tx of openShift.transactions) {
@@ -63,15 +62,13 @@ export async function POST() {
 
     const transactionCount = openShift.transactions.length;
     const soldProducts = Array.from(soldProductsMap.values());
-    const closedAt = new Date();
+    const closedAtTime = new Date();
 
-    // Закрываем смену
     await prisma.shift.update({
       where: { id: openShift.id },
-      data: { closedAt },
+      data: { closedAt: closedAtTime }, // ИСПРАВЛЕНО: Используем 'closedAt'
     });
 
-    // Возвращаем расширенный отчет
     return NextResponse.json({
       message: "Смена успешно закрыта.",
       report: {
@@ -80,8 +77,8 @@ export async function POST() {
         totalQrSales,
         transactionCount,
         soldProducts,
-        openedAt: openShift.openedAt.toISOString(),
-        closedAt: closedAt.toISOString(),
+        openedAt: openShift.openedAt.toISOString(), // ИСПРАВЛЕНО: Используем 'openedAt'
+        closedAt: closedAtTime.toISOString(), // ИСПРАВЛЕНО: Используем 'closedAt'
       },
     });
   } catch (error) {

@@ -1,67 +1,44 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 
-interface StoreInfo {
-  store: {
-    id: string;
+// ИЗМЕНЕНО: Интерфейс для props, а не для внутреннего состояния
+interface Props {
+  store?: {
     name: string;
     address: string;
   };
-  cashier: {
+  cashier?: {
     name: string | null;
     email: string | null;
   };
 }
 
-const StoreHeader: React.FC = () => {
-  const [data, setData] = useState<StoreInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// ИЗМЕНЕНО: Компонент теперь принимает props
+const StoreHeader: React.FC<Props> = ({ store, cashier }) => {
+  // УДАЛЕНО: Вся логика useState и useEffect для загрузки данных
 
-  useEffect(() => {
-    const fetchStoreData = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch("/api/cashier/store");
-        if (!response.ok) {
-          throw new Error("Не удалось загрузить данные магазина.");
-        }
-        const responseData: StoreInfo = await response.json();
-        setData(responseData);
-      } catch (err) {
-        setError((err as Error).message || "Ошибка при загрузке данных.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStoreData();
-  }, []);
-
-  if (loading) {
-    return <div className="text-gray-400">Загрузка информации о магазине...</div>;
-  }
-
-  if (error) {
-    return <div className="text-red-400">Ошибка: {error}</div>;
-  }
-
-  if (!data) {
-    return <div className="text-gray-400">Данные не найдены.</div>;
+  // ИЗМЕНЕНО: Проверяем наличие props, а не внутреннего состояния
+  if (!store || !cashier) {
+    return (
+      <div>
+        <h1 className="text-lg font-bold text-gray-400">Смена не открыта</h1>
+        <p className="text-sm text-gray-500">Откройте смену, чтобы начать работу.</p>
+      </div>
+    );
   }
 
   return (
-    <header className="bg-indigo-700 rounded-2xl px-6 py-3 flex items-start w-full">
+    <header className="flex items-start w-full">
       <div className="flex justify-between items-start w-full gap-4">
         <div>
-          <h1 className="text-lg font-bold text-white">{data.store.name}</h1>
-          <p className="text-sm text-indigo-100">{data.store.address}</p>
+          <h1 className="text-lg font-bold text-white">{store.name}</h1>
+          <p className="text-sm text-indigo-100">{store.address}</p>
         </div>
         <div className="text-right">
           <p className="text-sm font-semibold text-indigo-100">Кассир:</p>
           <p className="text-sm text-white font-medium">
-            {data.cashier.name || data.cashier.email || "Кассир не определен"}
+            {cashier.name || cashier.email || "Кассир не определен"}
           </p>
         </div>
       </div>
